@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.usuarioRouter = void 0;
+const express_1 = require("express");
+const persona_controllers_1 = require("../controllers/persona.controllers");
+const authenticateToken_1 = require("../middlewares/authenticateToken");
+const router = (0, express_1.Router)();
+exports.usuarioRouter = router;
+router.post('/register', persona_controllers_1.UsuarioController.registerUsuario);
+router.put('/update/:id', authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.actualizarUsuario);
+router.get("/usuario/:id", authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.obtenerUsuario);

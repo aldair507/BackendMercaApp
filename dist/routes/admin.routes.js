@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.adminRoutes = void 0;
+const express_1 = require("express");
+const Admin_controllers_1 = require("../controllers/Admin.controllers");
+const authenticateToken_1 = require("../middlewares/authenticateToken");
+const authenticateAdmin_1 = require("../middlewares/authenticateAdmin");
+const persona_controllers_1 = require("../controllers/persona.controllers");
+const router = (0, express_1.Router)();
+exports.adminRoutes = router;
+router.post("/register", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, Admin_controllers_1.AdminController.registroUsarioConRol);
+router.put("/update/:id", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, persona_controllers_1.UsuarioController.actualizarUsuario);

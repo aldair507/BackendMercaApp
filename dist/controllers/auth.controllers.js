@@ -1,0 +1,24 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuthController = void 0;
+const auth_service_1 = require("../services/auth.service");
+class AuthController {
+    static async login(req, res) {
+        const { correo, password } = req.body;
+        const result = await auth_service_1.AuthService.login(correo, password, res);
+        return res.status(result.statusCode).json({
+            success: result.success,
+            data: result.data,
+            error: result.error
+        });
+    }
+    static async logout(req, res) {
+        const result = await auth_service_1.AuthService.logout(res);
+        return res.status(result.statusCode).json({
+            success: result.success,
+            message: result.message,
+            error: result.error
+        });
+    }
+}
+exports.AuthController = AuthController;
