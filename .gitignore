@@ -13,9 +13,7 @@
 # Ignorar los archivos de configuración del editor (ejemplo: Visual Studio Code)
 .vscode/
 
-# Ignorar las carpetas de compilación o producción
-/dist
-/build
+
 
 # Ignorar archivos de sistemas operativos específicos (ejemplo: macOS)
 .DS_Store
