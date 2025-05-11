@@ -11,16 +11,13 @@ const app = express();
 
 connectDB();
 
+app.use(morgan("dev"));
 app.use(express.json());
 
 app.use("/api", usuarioRouter);
 app.use("/api/auth", authRouter);
-app.use("/api/admin",adminRoutes)
+app.use("/api/admin", adminRoutes);
 app.use(cookieParser());
-
-
-
-app.use(morgan("dev"));
 
 app.listen(PORT, () => {
   console.log("Server is running on port", PORT);

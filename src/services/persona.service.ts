@@ -1,5 +1,5 @@
 import { PersonaModel } from "../models/persona/persona.model";
-import { hashPassword } from "../utils/auth.utils";
+import { comparePasswords, hashPassword } from "../utils/auth.utils";
 import { IUsuario, UsuarioSchema } from "../types/usuario.types";
 import { generateToken } from "../middlewares/generateToken";
 
@@ -177,7 +177,7 @@ export class PersonaService {
   }> {
     try {
       const usuario = await PersonaModel.findOne({ idPersona });
-      
+
       if (!usuario) {
         return {
           success: false,
@@ -197,6 +197,137 @@ export class PersonaService {
       return {
         success: false,
         error: "Error interno al obtener el usuario",
+      };
+    }
+  }
+
+  public static async cambiarContrasena(
+    idUsuario: string,
+    datosCambio: {
+      contrasenaActual: string;
+      nuevaContrasena: string;
+      confirmacionNuevaContrasena: string;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: Omit<IUsuario, "password">;
+    error?: string;
+    code?: number;
+    validationErrors?: { path: string; message: string }[];
+  }> {
+    // 1. Validación básica del ID
+    if (!idUsuario) {
+      return { success: false, error: "ID de usuario inválido", code: 400 };
+    }
+
+    try {
+      // 2. Validaciones de contraseña (igual que antes)
+      if (
+        datosCambio.nuevaContrasena !== datosCambio.confirmacionNuevaContrasena
+      ) {
+        return {
+          success: false,
+          error: "La nueva contraseña y su confirmación no coinciden",
+          code: 400,
+        };
+      }
+
+      // 3. Obtener usuario con contraseña
+      const usuario = await PersonaModel.findOne({
+        idPersona: idUsuario,
+      }).select("+password");
+
+      if (!usuario) {
+        return { success: false, error: "Usuario no encontrado", code: 404 };
+      }
+
+      // 4. Verificar contraseña actual
+      const esContrasenaValida = await comparePasswords(
+        datosCambio.contrasenaActual,
+        usuario.password
+      );
+
+      if (!esContrasenaValida) {
+        return {
+          success: false,
+          error: "Contraseña actual incorrecta",
+          code: 401,
+        };
+      }
+
+      // 5. Hashear nueva contraseña
+      const nuevaContrasenaHash = await hashPassword(
+        datosCambio.nuevaContrasena
+      );
+
+      // 6. Actualizar contraseña usando el _id real del documento
+      const usuarioActualizado = await PersonaModel.findOneAndUpdate(
+        { _id: usuario._id }, // Usamos el _id del documento encontrado
+        {
+          $set: { password: nuevaContrasenaHash },
+          $currentDate: { fechaActualizacionPersona: true },
+        },
+        {
+          new: true,
+          select: "-password -__v -fechaCreacionPersona",
+          lean: true,
+        }
+      );
+
+      if (!usuarioActualizado) {
+        return {
+          success: false,
+          error: "Error al actualizar contraseña",
+          code: 500,
+        };
+      }
+
+      return {
+        success: true,
+        data: usuarioActualizado as Omit<IUsuario, "password">,
+      };
+    } catch (error) {
+      console.error(
+        `Error cambiando contraseña para usuario ${idUsuario}:`,
+        error
+      );
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Error interno al cambiar contraseña",
+        code: 500,
+      };
+    }
+  }
+
+  public static async getUsuarios(): Promise<any> {
+    try {
+      const respuesta = await PersonaModel.find().lean();
+
+      if (!respuesta || respuesta.length === 0) {
+        return {
+          success: false,
+          error: "No hay usuarios registrados",
+        };
+      }
+
+      // Eliminar campos innecesarios como 'password' y '__v' antes de devolver los usuarios
+      const usuarios = respuesta.map((user) => {
+        const { password, __v, ...rest } = user;
+        return rest;
+      });
+
+      return {
+        success: true,
+        data: usuarios,
+      };
+    } catch (error) {
+      console.error("Error en el servicio de usuarios:", error);
+      return {
+        success: false,
+        error: "Error al obtener usuarios",
       };
     }
   }

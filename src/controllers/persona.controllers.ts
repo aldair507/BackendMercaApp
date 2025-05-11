@@ -1,6 +1,8 @@
 import { PersonaService } from "../services/persona.service";
 import { Request, Response, RequestHandler } from "express";
 
+import { CambioContrasenaSchema } from "../types/cambioContraseña.types";
+
 export class UsuarioController {
   static registerUsuario: RequestHandler = async (
     req: Request,
@@ -95,6 +97,64 @@ export class UsuarioController {
       return res.status(500).json({
         success: false,
         message: "Error interno del servidor",
+      });
+    }
+  }
+
+  public static async cambiarContrasena(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      console.log(id);
+      const datosValidados = CambioContrasenaSchema.parse(req.body);
+
+      const resultado = await PersonaService.cambiarContrasena(
+        id,
+        datosValidados
+      );
+
+      if (!resultado.success) {
+        return res.status(resultado.code || 400).json({
+          success: false,
+          error: resultado.error,
+          validationErrors: resultado.validationErrors,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: resultado.data,
+        message: "Contraseña actualizada exitosamente",
+      });
+    } catch (error) {
+      console.error("Error en PersonaController.cambiarContrasena:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Error interno del servidor",
+      });
+    }
+  }
+  public static async getUsuarios(req: Request, res: Response): Promise<Response> {
+    try {
+      // Llamar al servicio para obtener los usuarios
+      const resultado = await PersonaService.getUsuarios();
+
+      if (!resultado.success) {
+        return res.status(404).json({
+          success: false,
+          message: resultado.error || 'No hay usuarios registrados',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: resultado.data,
+        message: 'Usuarios obtenidos exitosamente',
+      });
+    } catch (error) {
+      console.error("Error en getUsuarios:", error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error al obtener usuarios',
       });
     }
   }
