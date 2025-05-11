@@ -17,10 +17,10 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser()); // <-- antes de las rutas
 
-app.use("/api/", usuarioRouter);
+app.use("/api", usuarioRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
-app.get("/test/", (req, res) => {
+app.get("/test", (req, res) => {
   res.json({ success: true, message: "Ruta de prueba funcionando" });
 });
 
