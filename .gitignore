@@ -1,2 +1,22 @@
-.vercel
-.node_modules
+# Ignorar los directorios de dependencias
+/node_modules
+
+# Ignorar los archivos generados por el despliegue de Vercel
+/.vercel
+
+# Ignorar los archivos de log
+*.log
+
+# Ignorar el archivo de configuración de la base de datos local
+.env
+
+# Ignorar los archivos de configuración del editor (ejemplo: Visual Studio Code)
+.vscode/
+
+# Ignorar las carpetas de compilación o producción
+/dist
+/build
+
+# Ignorar archivos de sistemas operativos específicos (ejemplo: macOS)
+.DS_Store
+Thumbs.db
