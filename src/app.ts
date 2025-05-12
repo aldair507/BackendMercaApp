@@ -6,14 +6,23 @@ import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth.routes";
 import morgan from "morgan";
 import { adminRoutes } from "./routes/admin.routes";
-import cors from "cors"
+import cors from "cors";
 
 const app = express();
 
 connectDB();
 
 app.use(morgan("dev"));
-app.use(cors());
+app.use(
+  cors({
+    origin: "*", // Permite cualquier origen
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "sessiontoken"],
+    credentials: true,
+    exposedHeaders: ["sessiontoken"],
+    maxAge: 86400,
+  })
+);
 app.use(express.json());
 app.use(cookieParser()); // <-- antes de las rutas
 
@@ -23,9 +32,6 @@ app.use("/api/admin", adminRoutes);
 app.get("/test", (req, res) => {
   res.json({ success: true, message: "Ruta de prueba funcionando" });
 });
-
-
-
 
 app.listen(PORT, () => {
   console.log("Server is running on port", PORT);
