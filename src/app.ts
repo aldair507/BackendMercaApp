@@ -17,7 +17,7 @@ app.use(
   cors({
     origin: "*", // Permite cualquier origen
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "sessiontoken"],
+    allowedHeaders: ["Content-Type", "Authorization", "sessiontoken","Access-Control-Allow-Credentials","Accept"],
     credentials: true,
     exposedHeaders: ["sessiontoken"],
     maxAge: 86400,
