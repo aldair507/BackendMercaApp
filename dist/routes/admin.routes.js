@@ -8,6 +8,6 @@ const authenticateAdmin_1 = require("../middlewares/authenticateAdmin");
 const persona_controllers_1 = require("../controllers/persona.controllers");
 const router = (0, express_1.Router)();
 exports.adminRoutes = router;
-router.post("/register", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, Admin_controllers_1.AdminController.registroUsarioConRol);
+router.post("/register", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, Admin_controllers_1.AdminController.registroUsuarioConRol);
 router.put("/update/:id", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, persona_controllers_1.UsuarioController.actualizarUsuario);
 router.get("/usuarios", authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.getUsuarios);

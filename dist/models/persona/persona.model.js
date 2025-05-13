@@ -13,6 +13,10 @@ const personaSchema = new mongoose_1.Schema({
     correo: { type: String, required: true },
     password: { type: String, required: true },
     fechaCreacionPersona: { type: Date, default: Date.now },
+    nit: { type: String }, // Campo opcional para microempresarios
+    nombreEmpresa: { type: String }, // Campo opcional para microempresarios
+    codigoVendedor: { type: String }, // Campo opcional para vendedores
+    ventasRealizadas: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Venta" }],
 }, {
     timestamps: true,
 });

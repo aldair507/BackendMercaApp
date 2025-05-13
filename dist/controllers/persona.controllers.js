@@ -8,6 +8,7 @@ class UsuarioController {
     static async actualizarUsuario(req, res) {
         try {
             const id = req.params.id;
+            console.log(id);
             const datos = { ...req.body };
             const usuarioAuth = req.user;
             if ("password" in datos) {
@@ -114,12 +115,14 @@ exports.UsuarioController = UsuarioController;
 _a = UsuarioController;
 UsuarioController.registerUsuario = async (req, res) => {
     try {
-        const result = await persona_service_1.PersonaService.registerUsuario(req.body);
+        const userData = req.body;
+        const result = await persona_service_1.PersonaService.registerUsuario(userData);
         if (!result.success) {
             res.status(400).json({
                 success: false,
                 message: result.error,
                 errors: result.validationErrors,
+                requestData: userData,
             });
             return;
         }
@@ -127,6 +130,7 @@ UsuarioController.registerUsuario = async (req, res) => {
             success: true,
             message: "Usuario registrado exitosamente",
             data: result.data,
+            requestData: userData,
         });
     }
     catch (error) {
@@ -134,6 +138,7 @@ UsuarioController.registerUsuario = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error interno del servidor",
+            requestData: req.body,
         });
     }
 };
