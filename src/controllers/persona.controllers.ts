@@ -9,27 +9,31 @@ export class UsuarioController {
     res: Response
   ) => {
     try {
-      const result = await PersonaService.registerUsuario(req.body);
-
+      const userData = req.body;
+      const result = await PersonaService.registerUsuario(userData);
+      
       if (!result.success) {
         res.status(400).json({
           success: false,
           message: result.error,
           errors: result.validationErrors,
+          requestData: userData,
         });
         return;
       }
-
+      
       res.status(201).json({
         success: true,
         message: "Usuario registrado exitosamente",
         data: result.data,
+        requestData: userData,
       });
     } catch (error) {
       console.error("Error en registerUsuario:", error);
       res.status(500).json({
         success: false,
         message: "Error interno del servidor",
+        requestData: req.body,
       });
     }
   };
@@ -40,6 +44,7 @@ export class UsuarioController {
   ) {
     try {
       const id = req.params.id;
+      console.log(id)
       const datos = { ...req.body };
       const usuarioAuth = req.user;
 

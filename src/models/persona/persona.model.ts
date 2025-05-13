@@ -1,6 +1,6 @@
 import { Schema, model, Document } from "mongoose";
-
 import { IPersona } from "../../interfaces/persona.interface";
+import z from "zod"
 
 export interface IPersonaDocument extends IPersona, Document {}
 
@@ -16,9 +16,14 @@ const personaSchema = new Schema<IPersonaDocument>(
     correo: { type: String, required: true },
     password: { type: String, required: true },
     fechaCreacionPersona: { type: Date, default: Date.now },
+    nit: { type: String }, // Campo opcional para microempresarios
+    nombreEmpresa: { type: String }, // Campo opcional para microempresarios
+    codigoVendedor: { type: String }, // Campo opcional para vendedores
   },
   {
     timestamps: true,
   }
 );
+
+
 export const PersonaModel = model<IPersonaDocument>("Usuarios", personaSchema);

@@ -6,7 +6,7 @@ import { UsuarioController } from "../controllers/persona.controllers";
 
 const router=Router();
 
-router.post("/register",authenticateToken,authenticateAdmin,AdminController.registroUsarioConRol)
+router.post("/register",authenticateToken,authenticateAdmin,AdminController.registroUsuarioConRol)
 router.put("/update/:id",authenticateToken,authenticateAdmin,UsuarioController.actualizarUsuario)
 router.get("/usuarios",authenticateToken,UsuarioController.getUsuarios)
 

@@ -11,4 +11,7 @@ export interface IPersona {
   correo: string;
   password: string;
   fechaCreacionPersona: Date;
+   nit?: string; // Para microempresarios
+  nombreEmpresa?: string; // Para microempresarios
+  codigoVendedor?: string; // 
 }

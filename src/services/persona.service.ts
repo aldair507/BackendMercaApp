@@ -2,31 +2,43 @@ import { PersonaModel } from "../models/persona/persona.model";
 import { comparePasswords, hashPassword } from "../utils/auth.utils";
 import { IUsuario, UsuarioSchema } from "../types/usuario.types";
 import { generateToken } from "../middlewares/generateToken";
+import { IPersona } from "../interfaces/persona.interface";
 
 export class PersonaService {
   public static async registerUsuario(
-    usuarioData: any,
+    usuarioData: Partial<IPersona>,
     rolParam?: string
   ): Promise<{
     success: boolean;
     data?: any;
     error?: string;
     validationErrors?: any[];
+    requestData?: any;
   }> {
+    // Guardar datos originales de la solicitud fuera del try para que esté disponible en catch
+
     try {
-      console.log(rolParam);
+      console.log("Datos recibidos en el servicio:", usuarioData);
+      console.log("Rol recibido:", rolParam);
+
+      // Si se especifica un rol desde el parámetro, lo usamos
+      if (rolParam) {
+        usuarioData.rol = rolParam;
+      }
+
+      // Validar datos con Zod
       const validatedData = UsuarioSchema.parse({
         ...usuarioData,
-        rol: rolParam ?? "usuario",
         edad: Number(usuarioData.edad),
         identificacion: Number(usuarioData.identificacion),
       });
 
-      // Verificar si el usuario ya existe
+      // Verificar si el usuario ya existe por correo
       const usuarioExistenteCorreo = await PersonaModel.findOne({
         correo: validatedData.correo,
       });
 
+      // Verificar si el usuario ya existe por identificación
       const usuarioExistenteId = await PersonaModel.findOne({
         identificacion: validatedData.identificacion,
       });
@@ -48,12 +60,19 @@ export class PersonaService {
       // Crear nuevo usuario
       const nuevoUsuario = new PersonaModel({
         ...validatedData,
+        estadoPersona: validatedData.estadoPersona ?? true,
         password: await hashPassword(validatedData.password),
         fechaCreacionPersona: new Date(),
+        // Aseguramos que los campos opcionales se pasen correctamente
+        nit: validatedData.nit || undefined,
+        nombreEmpresa: validatedData.nombreEmpresa || undefined,
+        codigoVendedor: validatedData.codigoVendedor || undefined,
       });
 
       // Guardar en la base de datos
       const savedUsuario = await nuevoUsuario.save();
+
+      // Generar token de autenticación
       const token = generateToken(
         savedUsuario.idPersona.toString(),
         savedUsuario.rol
@@ -66,19 +85,12 @@ export class PersonaService {
       return {
         success: true,
         data: {
-          usuarioResponse,
+          usuario: usuarioResponse,
           token,
         },
       };
     } catch (error) {
       console.error("Error en PersonaService.registerUsuario:", error);
-
-      if (error instanceof Error && "errors" in error) {
-        return {
-          success: false,
-          error: "Error de validación",
-        };
-      }
 
       return {
         success: false,
@@ -104,6 +116,7 @@ export class PersonaService {
         code: 400,
       };
     }
+    console.log(id);
 
     try {
       //  Buscar usuario por idPersona
@@ -148,12 +161,19 @@ export class PersonaService {
         }
       ).lean();
 
-      if (!updatedUser) {
-        return {
-          success: false,
-          error: "Error al actualizar usuario",
-          code: 500,
-        };
+      if (updatePayload.identificacion) {
+        const identificacionExistente = await PersonaModel.findOne({
+          identificacion: updatePayload.identificacion,
+          idPersona: { $ne: id }, // Excluir al usuario actual
+        });
+
+        if (identificacionExistente) {
+          return {
+            success: false,
+            error: "Ya existe un usuario con esta identificación",
+            code: 400,
+          };
+        }
       }
 
       return {
