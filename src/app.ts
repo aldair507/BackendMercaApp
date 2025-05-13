@@ -15,7 +15,12 @@ connectDB();
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: '*',
+    origin: [
+    'http://localhost:8081/',
+    'http://localhost:19006/',
+    'http://10.0.2.2:8081/',
+    'exp://10.0.2.2:8081'
+  ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -39,6 +44,6 @@ app.get("/test", (req, res) => {
   res.json({ success: true, message: "Ruta de prueba funcionando" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log("Server is running on port", PORT);
 });
