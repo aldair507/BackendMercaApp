@@ -14,4 +14,5 @@ export interface IPersona {
    nit?: string; // Para microempresarios
   nombreEmpresa?: string; // Para microempresarios
   codigoVendedor?: string; // 
+  ventasRealizadas: mongoose.Types.ObjectId[];
 }

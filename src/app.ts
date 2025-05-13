@@ -7,6 +7,7 @@ import { authRouter } from "./routes/auth.routes";
 import morgan from "morgan";
 import { adminRoutes } from "./routes/admin.routes";
 import cors from "cors";
+import { ventaRouter } from "./routes/venta.routes";
 
 const app = express();
 
@@ -15,7 +16,12 @@ connectDB();
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: '*',
+    origin: [
+    'http://localhost:8081/',
+    'http://localhost:19006/',
+    'http://10.0.2.2:8081/',
+    'exp://10.0.2.2:8081'
+  ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -35,10 +41,11 @@ app.use(cookieParser()); // <-- antes de las rutas
 app.use("/api", usuarioRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
+app.use("/api/ventas",ventaRouter)
 app.get("/test", (req, res) => {
   res.json({ success: true, message: "Ruta de prueba funcionando" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT , '0.0.0.0', () => {
   console.log("Server is running on port", PORT);
 });
