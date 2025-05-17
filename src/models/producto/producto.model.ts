@@ -1,7 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface IProducto extends Document {
-  idProducto: string;
+  idProducto: string; // Cambiado a no opcional
   nombre: string;
   cantidad: number;
   categoria: string;
@@ -9,31 +9,49 @@ export interface IProducto extends Document {
   estado: boolean;
   descuento: number;
   fechaCreacionProducto: Date;
-  mostrarInformacion(): string;
-  actualizarStock(cantidad: number): void;
 }
 
-const productoSchema = new Schema<IProducto>({
-  idProducto: { type: String, required: true, unique: true },
-  nombre: { type: String, required: true },
-  cantidad: { type: Number, required: true },
-  categoria: { type: String, required: true },
-  precio: { type: Number, required: true },
-  estado: { type: Boolean, default: true },
-  descuento: { type: Number, default: 0 },
-  fechaCreacionProducto: { type: Date, default: Date.now },
+const ProductoSchema = new Schema<IProducto>({
+  idProducto: {
+    type: String,
+    required: [true, 'El ID del producto es obligatorio'],
+    unique: true
+  },
+  nombre: {
+    type: String,
+    required: [true, 'El nombre del producto es obligatorio'],
+    trim: true
+  },
+  cantidad: {
+    type: Number,
+    required: [true, 'La cantidad es obligatoria'],
+    min: [0, 'La cantidad no puede ser negativa']
+  },
+  categoria: {
+    type: String,
+    required: [true, 'La categoría es obligatoria'],
+    enum: ['ELECTRONICA', 'ROPA', 'ALIMENTOS', 'HOGAR', 'OTROS']
+  },
+  precio: {
+    type: Number,
+    required: [true, 'El precio es obligatorio'],
+    min: [0.01, 'El precio debe ser mayor que cero']
+  },
+  estado: {
+    type: Boolean,
+    default: true
+  },
+  descuento: {
+    type: Number,
+    default: 0,
+    min: [0, 'El descuento no puede ser negativo']
+  },
+  fechaCreacionProducto: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  versionKey: false
 });
 
-
-
-// Método para mostrar información del producto
-productoSchema.methods.mostrarInformacion = function (): string {
-  return `Producto: ${this.nombre}, Precio: ${this.precio}, Stock: ${this.cantidad}`;
-};
-
-// Método para actualizar stock
-productoSchema.methods.actualizarStock = function (cantidad: number): void {
-  this.cantidad += cantidad;
-};
-
-export const ProductoModel = model<IProducto>("Producto", productoSchema);
+export const ProductoModel = model<IProducto>("Producto", ProductoSchema);

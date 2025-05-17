@@ -7,4 +7,4 @@ const venta_controller_1 = require("../controllers/venta.controller");
 const authenticateToken_1 = require("../middlewares/authenticateToken");
 const router = (0, express_1.Router)();
 exports.ventaRouter = router;
-router.post('/', authenticateToken_1.authenticateToken, venta_controller_1.VentaController.registrarVenta);
+router.post("/registrar-venta", authenticateToken_1.authenticateToken, venta_controller_1.VentaController.registrarVenta);

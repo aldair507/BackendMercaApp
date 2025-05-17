@@ -4,9 +4,9 @@ import { authenticateToken } from "../middlewares/authenticateToken";
 
 const router = Router();
 
-router.post("/register", UsuarioController.registerUsuario);
+router.post("/registro", UsuarioController.registerUsuario);
 router.put(
-  "/update/:id",
+  "/actualizar/:id",
   authenticateToken,
   UsuarioController.actualizarUsuario
 );

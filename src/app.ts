@@ -8,12 +8,16 @@ import morgan from "morgan";
 import { adminRoutes } from "./routes/admin.routes";
 import cors from "cors";
 import { ventaRouter } from "./routes/venta.routes";
+import { productoRoutes } from "./routes/producto.routes";
+import bodyParser from 'body-parser';
 
 const app = express();
 
 connectDB();
 
 app.use(morgan("dev"));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: [
@@ -45,6 +49,7 @@ app.use("/api", usuarioRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
 app.use("/api/ventas", ventaRouter);
+app.use("/api/productos", productoRoutes);
 app.get("/test", (req, res) => {
   res.json({ success: true, message: "Ruta de prueba funcionando" });
 });

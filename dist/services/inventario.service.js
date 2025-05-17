@@ -1,92 +1,71 @@
 "use strict";
-// // src/services/inventario.service.ts
-// import { IProducto } from '../models/producto/producto.model';
-// // Clase auxiliar para simular un producto con datos quemados
-// class Producto implements IProducto {
-//     idProducto: string;
-//     nombre: string;
-//     categoria: string;
-//     stock: number;
-//     precio: number;
-//     estado: boolean;
-//     descuento: number;
-//     fechaCreacionProducto: Date;
-//     constructor(data: Omit<IProducto, 'mostrarInformacion' | 'actualizarStock'>) {
-//         this.idProducto = data.idProducto;
-//         this.nombre = data.nombre;
-//         this.categoria = data.categoria;
-//         this.stock = data.stock;
-//         this.precio = data.precio;
-//         this.estado = data.estado;
-//         this.descuento = data.descuento;
-//         this.fechaCreacionProducto = data.fechaCreacionProducto;
-//     }
-//     mostrarInformacion(): string {
-//         return `Producto: ${this.nombre}, Precio: ${this.precio}, Stock: ${this.stock}`;
-//     }
-//     actualizarStock(cantidad: number): void {
-//         const nuevoStock = this.stock - cantidad;
-//         if (nuevoStock < 0) {
-//             throw new Error(`Stock insuficiente para el producto ${this.idProducto}`);
-//         }
-//         this.stock = nuevoStock;
-//     }
-// }
-// export class InventarioService {
-//     private productos: IProducto[] = [
-//         new Producto({
-//             idProducto: "P1",
-//             nombre: "Camiseta",
-//             categoria: "Ropa",
-//             stock: 50,
-//             precio: 20,
-//             estado: true,
-//             descuento: 0,
-//             fechaCreacionProducto: new Date(),
-//         }),
-//         new Producto({
-//             idProducto: "P2",
-//             nombre: "Pantalón",
-//             categoria: "Ropa",
-//             stock: 30,
-//             precio: 30,
-//             estado: true,
-//             descuento: 0,
-//             fechaCreacionProducto: new Date(),
-//         }),
-//         new Producto({
-//             idProducto: "P3",
-//             nombre: "Zapatos",
-//             categoria: "Calzado",
-//             stock: 20,
-//             precio: 50,
-//             estado: true,
-//             descuento: 0,
-//             fechaCreacionProducto: new Date(),
-//         }),
-//     ];
-//     buscarProducto(idProducto: string): IProducto | null {
-//         return this.productos.find(p => p.idProducto === idProducto) || null;
-//     }
-//     actualizarStock(idProducto: string, cantidadVendida: number): void {
-//         const producto = this.buscarProducto(idProducto);
-//         if (!producto) {
-//             throw new Error(`Producto ${idProducto} no encontrado`);
-//         }
-//         producto.actualizarStock(cantidadVendida);
-//     }
-//     listarProductos(): IProducto[] {
-//         return this.productos.map(p => ({
-//             idProducto: p.idProducto,
-//             nombre: p.nombre,
-//             categoria: p.categoria,
-//             stock: p.stock,
-//             precio: p.precio,
-//             estado: p.estado,
-//             descuento: p.descuento,
-//             fechaCreacionProducto: p.fechaCreacionProducto,
-//             mostrarInformacion: p.mostrarInformacion.bind(p),
-//             actualizarStock: p.actualizarStock.bind(p),
-//         }));
-//     }
-// }
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Inventario = void 0;
+const producto_model_1 = require("../models/producto/producto.model");
+class Inventario {
+    // 1. Listar todos los productos
+    async listarProductos() {
+        return await producto_model_1.ProductoModel.find({ estado: true });
+    }
+    // 2. Listar productos agrupados por categoría
+    async listarProductosPorCategoria() {
+        const productos = await producto_model_1.ProductoModel.find({ estado: true });
+        const categoriasMap = new Map();
+        for (const p of productos) {
+            const productoFormateado = {
+                idProducto: p.idProducto,
+                nombre: p.nombre,
+                cantidad: p.cantidad,
+                precio: p.precio,
+                descuento: p.descuento,
+            };
+            if (!categoriasMap.has(p.categoria)) {
+                categoriasMap.set(p.categoria, {
+                    nombreCategoria: p.categoria,
+                    productos: [productoFormateado],
+                });
+            }
+            else {
+                categoriasMap.get(p.categoria)?.productos.push(productoFormateado);
+            }
+        }
+        return {
+            categorias: Array.from(categoriasMap.values()),
+        };
+    }
+    // 3. Buscar productos por nombre, ID o categoría
+    async buscarProductos(criterio) {
+        return await producto_model_1.ProductoModel.find({
+            estado: true,
+            $or: [
+                { nombre: { $regex: criterio, $options: "i" } },
+                { idProducto: { $regex: criterio, $options: "i" } },
+                { categoria: { $regex: criterio, $options: "i" } },
+            ],
+        });
+    }
+    // 4. Guardar nuevo producto
+    async guardarProducto(productoData) {
+        const producto = new producto_model_1.ProductoModel(productoData);
+        return await producto.save();
+    }
+    // 5. Actualizar stock del producto (por ejemplo, después de una venta)
+    async actualizarStock(idProducto, cantidadVendida) {
+        const producto = await producto_model_1.ProductoModel.findOne({ idProducto });
+        if (!producto)
+            throw new Error("Producto no encontrado");
+        producto.cantidad -= cantidadVendida;
+        await producto.save();
+        return producto;
+    }
+    // 6. Desactivar producto (soft delete)
+    async desactivarProducto(idProducto) {
+        return await producto_model_1.ProductoModel.findOneAndUpdate({ idProducto }, { estado: false }, { new: true });
+    }
+    // 7. Calcular el valor total del inventario
+    async calcularValorTotalInventario() {
+        const productos = await producto_model_1.ProductoModel.find({ estado: true });
+        return productos.reduce((total, prod) => total + prod.precio * prod.cantidad, 0);
+    }
+}
+exports.Inventario = Inventario;

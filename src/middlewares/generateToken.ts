@@ -6,6 +6,6 @@ export function generateToken(userId: string, rol: string): string {
   return jwt.sign(
     { id: userId, rol },
     JWT_SECRET!,
-    { expiresIn: "1d" } // Token expira en 1 día
+    { expiresIn: "1h" } // Token expira en 1 día
   );
 }

@@ -13,9 +13,13 @@ const morgan_1 = __importDefault(require("morgan"));
 const admin_routes_1 = require("./routes/admin.routes");
 const cors_1 = __importDefault(require("cors"));
 const venta_routes_1 = require("./routes/venta.routes");
+const producto_routes_1 = require("./routes/producto.routes");
+const body_parser_1 = __importDefault(require("body-parser"));
 const app = (0, express_1.default)();
 (0, database_1.connectDB)();
 app.use((0, morgan_1.default)("dev"));
+app.use(body_parser_1.default.json());
+app.use(body_parser_1.default.urlencoded({ extended: true }));
 app.use((0, cors_1.default)({
     origin: [
         "http://localhost:8081/",
@@ -42,6 +46,7 @@ app.use("/api", usuario_routes_1.usuarioRouter);
 app.use("/api/auth", auth_routes_1.authRouter);
 app.use("/api/admin", admin_routes_1.adminRoutes);
 app.use("/api/ventas", venta_routes_1.ventaRouter);
+app.use("/api/productos", producto_routes_1.productoRoutes);
 app.get("/test", (req, res) => {
     res.json({ success: true, message: "Ruta de prueba funcionando" });
 });
