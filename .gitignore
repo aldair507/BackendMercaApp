@@ -13,7 +13,7 @@
 # Ignorar los archivos de configuración del editor (ejemplo: Visual Studio Code)
 .vscode/
 
-
+/.dist
 
 # Ignorar archivos de sistemas operativos específicos (ejemplo: macOS)
 .DS_Store

@@ -5,8 +5,7 @@ export const authenticateToken = (
   req: Request & { user?: any },
   res: Response,
   next: NextFunction
-) => {
-  // 1. Obtener el token de las cookies o header
+): void => {
   const tokenFromCookie = req.cookies?.jwt;
   const tokenFromHeader = req.headers.authorization?.startsWith("Bearer ")
     ? req.headers.authorization.split(" ")[1]
@@ -15,24 +14,24 @@ export const authenticateToken = (
   const token = tokenFromCookie || tokenFromHeader;
 
   if (!token) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: "No se encontró token de autenticación",
     });
+    return;
   }
 
-  // 2. Verificar el token
   jwt.verify(token, JWT_SECRET!, (err: any, user: any) => {
     if (err) {
       res.clearCookie("jwt");
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         message: "Token inválido o expirado",
       });
+      return;
     }
 
     req.user = user;
-
     next();
   });
 };

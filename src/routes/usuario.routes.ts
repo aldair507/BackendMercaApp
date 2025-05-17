@@ -16,6 +16,6 @@ router.post(
   authenticateToken,
   UsuarioController.cambiarContrasena
 );
-router.get("/usuarios", UsuarioController.getUsuarios);
+router.get("/usuarios", UsuarioController.getUsua rios);
 
 export { router as usuarioRouter };
