@@ -8,13 +8,14 @@ class ProductoController {
         try {
             const resultado = await producto_service_1.ProductoService.registrarProducto(req.body);
             if (!resultado.success) {
-                return res.status(400).json(resultado);
+                res.status(400).json(resultado);
+                return;
             }
-            return res.status(201).json(resultado);
+            res.status(201).json(resultado);
         }
         catch (error) {
             console.error("Error en controlador de producto:", error);
-            return res.status(500).json({
+            res.status(500).json({
                 success: false,
                 error: "Error interno del servidor",
             });
