@@ -16,17 +16,11 @@ const venta_routes_1 = require("./routes/venta.routes");
 const producto_routes_1 = require("./routes/producto.routes");
 const body_parser_1 = __importDefault(require("body-parser"));
 const app = (0, express_1.default)();
-(0, database_1.connectDB)();
 app.use((0, morgan_1.default)("dev"));
 app.use(body_parser_1.default.json());
 app.use(body_parser_1.default.urlencoded({ extended: true }));
 app.use((0, cors_1.default)({
-    origin: [
-        "http://localhost:8081/",
-        "http://localhost:19006/",
-        "http://10.0.2.2:8081/",
-        "exp://10.0.2.2:8081",
-    ],
+    origin: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
         "Content-Type",
@@ -41,6 +35,7 @@ app.use((0, cors_1.default)({
 }));
 const PORT = 4000;
 app.use(express_1.default.json());
+app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cookie_parser_1.default)()); // <-- antes de las rutas
 app.use("/api", usuario_routes_1.usuarioRouter);
 app.use("/api/auth", auth_routes_1.authRouter);
@@ -50,6 +45,8 @@ app.use("/api/productos", producto_routes_1.productoRoutes);
 app.get("/test", (req, res) => {
     res.json({ success: true, message: "Ruta de prueba funcionando" });
 });
-app.listen(PORT, "0.0.0.0", () => {
-    console.log("Server is running on port", PORT);
+(0, database_1.connectDB)();
+app.listen(PORT || 4000, '0.0.0.0', () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
 });
+exports.default = app;
