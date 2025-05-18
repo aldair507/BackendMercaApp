@@ -5,9 +5,8 @@ const persona_model_1 = require("../models/persona/persona.model");
 const generateToken_1 = require("../middlewares/generateToken");
 const auth_utils_1 = require("../utils/auth.utils");
 class AuthService {
-    static async login(correo, password, res) {
+    static async login(correo, password) {
         try {
-            // 1. Buscar usuario por correo incluyendo explícitamente el password
             const usuario = await persona_model_1.PersonaModel.findOne({ correo });
             if (!usuario) {
                 return {
@@ -16,7 +15,6 @@ class AuthService {
                     error: "Usuario no encontrado",
                 };
             }
-            // 3. Comparar contraseñas de forma segura
             const isMatch = await (0, auth_utils_1.comparePasswords)(password, usuario.password);
             if (!isMatch) {
                 return {
@@ -26,10 +24,6 @@ class AuthService {
                 };
             }
             const token = (0, generateToken_1.generateToken)(usuario.idPersona.toString(), usuario.rol);
-            res.cookie("sessionToken", token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-            });
             const userData = {
                 idPersona: usuario.idPersona,
                 nombrePersona: usuario.nombrePersona,
@@ -42,6 +36,7 @@ class AuthService {
                 success: true,
                 statusCode: 200,
                 data: userData,
+                token: token,
             };
         }
         catch (error) {

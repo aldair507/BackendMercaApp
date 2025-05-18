@@ -1,18 +1,31 @@
 import { Request, Response } from "express";
 import { AuthService } from "../services/auth.service";
+import { token } from "morgan";
 
 export class AuthController {
-  public static async login(req: Request, res: Response) {
-    const { correo, password } = req.body;
+ public static async login(req: Request, res: Response): Promise<void> {
+  const { correo, password } = req.body;
 
-    const result = await AuthService.login(correo, password, res);
+  const result = await AuthService.login(correo, password);
 
-    res.status(result.statusCode).json({
-      success: result.success,
-      data: result.data,
-      error: result.error,
+  if (result.success && result.token) {
+    res.cookie("sessionToken", result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
     });
   }
+
+  res.status(result.statusCode).json({
+    success: result.success,
+    data: result.data,
+    token: result.token,
+    error: result.error,
+  });
+  // No return aquí
+}
+
+
 
   public static async logout(req: Request, res: Response) {
     const result = await AuthService.logout(res);
