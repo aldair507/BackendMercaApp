@@ -49,6 +49,31 @@ class ProductoController {
             next(error);
         }
     }
+    static async aumentarStockController(req, res) {
+        const { idProducto, cantidadAumentar } = req.body;
+        const inventario = new inventario_service_1.Inventario();
+        if (!idProducto || typeof cantidadAumentar !== "number") {
+            res.status(400).json({
+                success: false,
+                message: "Debes enviar 'idProducto' y 'cantidadAumentar' como número",
+            });
+            return;
+        }
+        try {
+            const productoActualizado = await inventario.aumentarStock(idProducto, cantidadAumentar);
+            res.status(200).json({
+                success: true,
+                mensaje: `Stock aumentado correctamente para ${productoActualizado.nombre}`,
+                data: productoActualizado,
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                mensaje: error instanceof Error ? error.message : "Error al aumentar stock",
+            });
+        }
+    }
     static async listar(req, res) {
         const inventario = new inventario_service_1.Inventario();
         try {

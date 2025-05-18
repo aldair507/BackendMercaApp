@@ -5,50 +5,52 @@ const mongoose_1 = require("mongoose");
 const ProductoSchema = new mongoose_1.Schema({
     idProducto: {
         type: String,
-        required: [true, 'El ID del producto es obligatorio'],
-        unique: true
+        required: [true, "El ID del producto es obligatorio"],
+        unique: true,
     },
     nombre: {
         type: String,
-        required: [true, 'El nombre del producto es obligatorio'],
-        trim: true
+        required: [true, "El nombre del producto es obligatorio"],
+        trim: true,
     },
     cantidad: {
         type: Number,
-        required: [true, 'La cantidad es obligatoria'],
-        min: [0, 'La cantidad no puede ser negativa']
+        required: [true, "La cantidad es obligatoria"],
+        min: [0, "La cantidad no puede ser negativa"],
     },
     categoria: {
         type: String,
-        required: [true, 'La categoría es obligatoria'],
-        enum: ['Frutas',
-            'Verduras',
-            'Carnes',
-            'Lácteos',
-            'Bebidas',
-            'Snacks',
-            'Limpieza',
-            'Otros']
+        required: [true, "La categoría es obligatoria"],
+        enum: [
+            "Frutas",
+            "Verduras",
+            "Carnes",
+            "Lácteos",
+            "Bebidas",
+            "Snacks",
+            "Limpieza",
+            "Otros",
+        ],
     },
     precio: {
         type: Number,
-        required: [true, 'El precio es obligatorio'],
-        min: [0.01, 'El precio debe ser mayor que cero']
+        required: [true, "El precio es obligatorio"],
+        min: [0.01, "El precio debe ser mayor que cero"],
     },
     estado: {
         type: Boolean,
-        default: true
+        default: true,
     },
     descuento: {
         type: Number,
         default: 0,
-        min: [0, 'El descuento no puede ser negativo']
+        min: [0, "El descuento no puede ser negativo"],
     },
     fechaCreacionProducto: {
         type: Date,
-        default: Date.now
-    }
+        default: Date.now,
+    },
 }, {
-    versionKey: false
+    versionKey: false,
 });
 exports.ProductoModel = (0, mongoose_1.model)("Producto", ProductoSchema);

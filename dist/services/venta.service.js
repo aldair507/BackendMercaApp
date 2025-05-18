@@ -6,42 +6,70 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.VentaService = void 0;
 const venta_model_1 = require("../models/venta/venta.model");
 const persona_model_1 = require("../models/persona/persona.model");
+const producto_model_1 = require("../models/producto/producto.model");
+const inventario_service_1 = require("./inventario.service");
 const mongoose_1 = __importDefault(require("mongoose"));
 class VentaService {
     static async registrarVenta(vendedorId, ventaData) {
         const session = await mongoose_1.default.startSession();
         session.startTransaction();
         try {
-            // Validar vendedor - ahora buscamos por _id que viene del token JWT
-            // Validar vendedor - ahora buscamos por idPersona en lugar de id
             const vendedor = await persona_model_1.PersonaModel.findOne({
-                idPersona: vendedorId, // Aquí usamos idPersona en lugar de id
+                idPersona: vendedorId,
                 rol: { $in: ["vendedor", "administrador"] },
                 estadoPersona: true,
             }).session(session);
-            console.log("Vendedor encontrado:", vendedor);
             if (!vendedor) {
                 throw new Error("Vendedor no válido o no activo");
             }
-            // Crear nueva venta
+            const productos = ventaData.productos;
+            if (!productos || !Array.isArray(productos) || productos.length === 0) {
+                throw new Error("No se proporcionaron productos para la venta");
+            }
+            // Procesamos solo el primer producto por simplicidad
+            const primerProductoVenta = productos[0];
+            const { idProducto, cantidadVendida } = primerProductoVenta;
+            if (!idProducto || !cantidadVendida) {
+                throw new Error("Faltan datos de producto o cantidad");
+            }
+            const producto = await producto_model_1.ProductoModel.findOne({
+                idProducto,
+                estado: true,
+            }).session(session);
+            if (!producto) {
+                throw new Error("Producto no encontrado o inactivo");
+            }
+            // Validar stock
+            if (producto.cantidad < cantidadVendida) {
+                throw new Error(`Stock insuficiente para ${producto.nombre}`);
+            }
+            // Calcular precio con descuento y total
+            const precioUnitario = producto.precio;
+            const descuento = producto.descuento || 0;
+            const precioConDescuento = precioUnitario - (precioUnitario * descuento) / 100;
+            const total = precioConDescuento * cantidadVendida;
+            // Actualizar stock
+            const inventario = new inventario_service_1.Inventario();
+            await inventario.actualizarStock(idProducto, cantidadVendida);
+            // Crear venta
             const nuevaVenta = new venta_model_1.VentaModel({
-                ...ventaData,
-                vendedor: vendedor._id,
+                productos: productos,
+                IdMetodoPago: ventaData.IdMetodoPago,
+                total: ventaData.total,
+                vendedor: vendedorId,
             });
             await nuevaVenta.save({ session });
-            // Actualizar vendedor
-            await persona_model_1.PersonaModel.findByIdAndUpdate(vendedor._id, { $push: { ventasRealizadas: nuevaVenta._id } }, { session });
+            // Asociar venta al vendedor
+            await persona_model_1.PersonaModel.findByIdAndUpdate(vendedorId, { $push: { ventasRealizadas: nuevaVenta._id } }, { session });
             await session.commitTransaction();
             return {
                 success: true,
                 data: nuevaVenta,
-                NombreVendedor: vendedor.nombrePersona,
-                ApellidoVendedor: vendedor.apellido,
+                mensaje: `Venta registrada de ${producto.nombre} (${cantidadVendida} unidades)`,
             };
         }
         catch (error) {
             await session.abortTransaction();
-            console.error("Error registrando venta:", error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Error al registrar venta",
@@ -49,53 +77,6 @@ class VentaService {
         }
         finally {
             session.endSession();
-        }
-    }
-    static async obtenerResumenVentas(filtros) {
-        try {
-            const { vendedorId, fechaInicio, fechaFin } = filtros;
-            const query = {};
-            if (vendedorId) {
-                query.vendedor = vendedorId;
-            }
-            if (fechaInicio || fechaFin) {
-                query.fechaVenta = {};
-                if (fechaInicio)
-                    query.fechaVenta.$gte = new Date(fechaInicio);
-                if (fechaFin)
-                    query.fechaVenta.$lte = new Date(fechaFin);
-            }
-            const ventas = await venta_model_1.VentaModel.find(query)
-                .populate({
-                path: "vendedor",
-                select: "codigoVendedor nombrePersona apellido",
-            })
-                .sort({ fechaVenta: -1 })
-                .lean();
-            const total = ventas.reduce((sum, venta) => sum + venta.total, 0);
-            return {
-                success: true,
-                data: {
-                    ventas: ventas.map((v) => ({
-                        idVenta: v.idVenta,
-                        fechaVenta: v.fechaVenta,
-                        total: v.total,
-                        vendedor: {
-                            _id: v.vendedor._id,
-                            codigoVendedor: v.vendedor.id,
-                        },
-                    })),
-                    total,
-                    cantidadVentas: ventas.length,
-                },
-            };
-        }
-        catch (error) {
-            console.error("Error obteniendo resumen de ventas:", error);
-            return {
-                success: false,
-                error: "Error al obtener resumen de ventas",
-            };
         }
     }
 }

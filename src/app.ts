@@ -10,9 +10,11 @@ import cors from "cors";
 import { ventaRouter } from "./routes/venta.routes";
 import { productoRoutes } from "./routes/producto.routes";
 import bodyParser from 'body-parser';
+import { inicializarMetodosPago } from "./controllers/metodoPago";
 
 const app = express();
 
+inicializarMetodosPago();
 app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

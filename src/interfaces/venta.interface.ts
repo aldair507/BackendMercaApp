@@ -4,7 +4,7 @@ import { IPersona } from "./persona.interface";
 export interface IVenta extends Document {
   idVenta: string;
   fechaVenta: Date;
-  vendedor:IPersona
+  vendedor: IPersona;
   productos: Array<{
     idProducto: string;
     nombre: string;
@@ -14,10 +14,8 @@ export interface IVenta extends Document {
     impuestos?: number;
     subtotal: number;
   }>;
-  metodoPago: {
-    idMetodoPago: string;
-    nombreMetodoPago: string;
-    fechaEmisionResumen: Date;
-  };
+
+  idMetodoPago: string;
+
   total: number;
 }

@@ -49,11 +49,24 @@ class Inventario {
         const producto = new producto_model_1.ProductoModel(productoData);
         return await producto.save();
     }
+    async aumentarStock(idProducto, cantidadAumentar) {
+        const producto = await producto_model_1.ProductoModel.findOne({ idProducto });
+        if (!producto)
+            throw new Error("Producto no encontrado");
+        if (!producto.estado)
+            throw new Error("Producto inactivo");
+        producto.cantidad += cantidadAumentar;
+        await producto.save();
+        return producto;
+    }
     // 5. Actualizar stock del producto (por ejemplo, después de una venta)
     async actualizarStock(idProducto, cantidadVendida) {
         const producto = await producto_model_1.ProductoModel.findOne({ idProducto });
         if (!producto)
             throw new Error("Producto no encontrado");
+        if (producto.cantidad < cantidadVendida) {
+            throw new Error(`Stock insuficiente para ${producto.nombre}`);
+        }
         producto.cantidad -= cantidadVendida;
         await producto.save();
         return producto;

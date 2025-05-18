@@ -16,6 +16,7 @@ class VentaController {
             }
             // Registrar la venta con el ID del usuario autenticado como vendedor
             const resultado = await venta_service_1.VentaService.registrarVenta(userId, req.body);
+            console.log(req.body);
             if (resultado.success) {
                 res.status(201).json(resultado);
             }
