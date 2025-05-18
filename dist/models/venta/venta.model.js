@@ -46,15 +46,25 @@ const ProductoVentaSchema = new mongoose_1.Schema({
 const VentaSchema = new mongoose_1.Schema({
     idVenta: {
         type: String,
-        required: true,
         unique: true,
-        default: () => `VNT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        required: true,
     },
     fechaVenta: { type: Date, default: Date.now },
     productos: { type: [ProductoVentaSchema], required: true },
     IdMetodoPago: { type: String, required: true },
     total: { type: Number, required: true },
-    vendedor: { type: mongoose_1.Schema.Types.ObjectId, ref: "Persona", required: true },
+    vendedor: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Usuarios", // Updated to match the actual model name in PersonaModel
+        required: true
+    },
+});
+VentaSchema.pre("validate", function (next) {
+    if (!this.idVenta) {
+        // aquí 'this' es any, por eso hay que castear para TS
+        this.idVenta = this._id.toString();
+    }
+    next();
 });
 VentaSchema.pre("save", function (next) {
     this.productos.forEach((p) => {

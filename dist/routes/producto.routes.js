@@ -11,5 +11,5 @@ const router = (0, express_1.default)();
 exports.productoRoutes = router;
 router.post("/registrar-producto", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.registrarProducto);
 router.put("/actualizar-producto/:id", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.actualizarProducto);
-router.post("/aumentar-stock/", producto_controller_1.ProductoController.aumentarStockController);
-router.get("/", producto_controller_1.ProductoController.listar);
+router.post("/aumentar-stock/", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.aumentarStockController);
+router.get("/", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.listar);

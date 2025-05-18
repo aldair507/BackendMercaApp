@@ -32,5 +32,22 @@ class VentaController {
             });
         }
     }
+    static async obtenerTodasLasVentasController(req, res) {
+        const result = await venta_service_1.VentaService.obtenerTodasLasVentas();
+        if (!result.success) {
+            res.status(500).json({ success: false, message: result.error });
+            return;
+        }
+        res.status(200).json(result);
+    }
+    static async obtenerVentasPorVendedorController(req, res) {
+        const { idVendedor } = req.params;
+        const result = await venta_service_1.VentaService.obtenerVentasPorVendedor(idVendedor);
+        if (!result.success) {
+            res.status(404).json({ success: false, message: result.error });
+            return;
+        }
+        res.status(200).json(result);
+    }
 }
 exports.VentaController = VentaController;

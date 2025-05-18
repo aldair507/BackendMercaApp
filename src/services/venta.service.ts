@@ -92,4 +92,58 @@ export class VentaService {
       session.endSession();
     }
   }
+  static async obtenerTodasLasVentas() {
+    try {
+      const ventas = await VentaModel.find()
+        .populate("vendedor", "nombrePersona rol")
+
+        .populate("productos.idProducto", "nombre precio"); // Traer datos del producto
+
+      return {
+        success: true,
+        data: ventas,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Error al obtener ventas",
+      };
+    }
+  }
+
+  // Obtener ventas por vendedor
+  static async obtenerVentasPorVendedor(vendedorId: string) {
+    try {
+      const vendedor = await PersonaModel.findOne({
+        idPersona: vendedorId,
+        rol: { $in: ["vendedor", "administrador"] },
+        estadoPersona: true,
+      });
+
+      if (!vendedor) {
+        return {
+          success: false,
+          error: "Vendedor no válido o no activo",
+        };
+      }
+
+      const ventas = await VentaModel.find({ vendedor: vendedorId })
+        .populate("productos.idProducto", "nombre precio")
+        .populate("vendedor", "nombre");
+
+      return {
+        success: true,
+        data: ventas,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Error al obtener ventas del vendedor",
+      };
+    }
+  }
 }

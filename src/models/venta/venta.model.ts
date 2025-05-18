@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, model } from "mongoose";
+import { object } from "zod";
 
 interface IProductoVenta {
   idProducto: string;
@@ -15,7 +16,10 @@ export interface IVenta extends Document {
   productos: IProductoVenta[];
   IdMetodoPago: string; // solo el id aquí
   total: number;
-  vendedor: mongoose.Types.ObjectId;
+vendedor: mongoose.Types.ObjectId;
+
+
+//  vendedor: mongoose.Types.ObjectId;
 }
 
 const ProductoVentaSchema = new Schema<IProductoVenta>(
@@ -33,16 +37,27 @@ const ProductoVentaSchema = new Schema<IProductoVenta>(
 const VentaSchema = new Schema<IVenta>({
   idVenta: {
     type: String,
-    required: true,
     unique: true,
-    default: () => `VNT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    required: true,
   },
   fechaVenta: { type: Date, default: Date.now },
   productos: { type: [ProductoVentaSchema], required: true },
   IdMetodoPago: { type: String, required: true },
   total: { type: Number, required: true },
-  vendedor: { type: Schema.Types.ObjectId, ref: "Persona", required: true },
+vendedor: { 
+    type: Schema.Types.ObjectId, 
+    ref: "Usuarios",  // Updated to match the actual model name in PersonaModel
+    required: true 
+  },});
+
+VentaSchema.pre("validate", function (next) {
+  if (!this.idVenta) {
+    // aquí 'this' es any, por eso hay que castear para TS
+    this.idVenta = (this._id as mongoose.Types.ObjectId).toString();
+  }
+  next();
 });
+
 
 VentaSchema.pre<IVenta>("save", function (next) {
   this.productos.forEach((p) => {

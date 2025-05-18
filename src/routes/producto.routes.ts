@@ -15,7 +15,7 @@ router.put(
   authenticateToken,
   ProductoController.actualizarProducto
 );
-router.post("/aumentar-stock/",ProductoController.aumentarStockController)
-router.get("/", ProductoController.listar);
+router.post("/aumentar-stock/",authenticateToken,ProductoController.aumentarStockController)
+router.get("/",authenticateToken, ProductoController.listar);
 
 export { router as productoRoutes };
