@@ -21,6 +21,34 @@ class ProductoController {
             });
         }
     }
+    static async actualizarProducto(req, res, next) {
+        try {
+            const idProducto = req.params.id;
+            console.log(idProducto);
+            if (!idProducto) {
+                res.status(400).json({
+                    success: false,
+                    error: "El ID del producto es requerido",
+                });
+                return;
+            }
+            const resultado = await producto_service_1.ProductoService.actualizarProducto(idProducto, req.body);
+            if (resultado.success) {
+                res.status(200).json(resultado);
+            }
+            else {
+                if (resultado.error === "Producto no encontrado") {
+                    res.status(404).json(resultado);
+                }
+                else {
+                    res.status(400).json(resultado);
+                }
+            }
+        }
+        catch (error) {
+            next(error);
+        }
+    }
     static async listar(req, res) {
         const inventario = new inventario_service_1.Inventario();
         try {

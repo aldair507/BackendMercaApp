@@ -6,7 +6,13 @@ class ProductoService {
     static async registrarProducto(data) {
         try {
             // Validación de campos obligatorios
-            const camposObligatorios = ["idProducto", "nombre", "cantidad", "categoria", "precio"];
+            const camposObligatorios = [
+                "idProducto",
+                "nombre",
+                "cantidad",
+                "categoria",
+                "precio",
+            ];
             const camposFaltantes = camposObligatorios.filter((campo) => !data[campo]);
             if (camposFaltantes.length > 0) {
                 return {
@@ -28,13 +34,13 @@ class ProductoService {
             if (productoData.cantidad < 0) {
                 return {
                     success: false,
-                    error: 'La cantidad no puede ser negativa',
+                    error: "La cantidad no puede ser negativa",
                 };
             }
             if (productoData.precio <= 0) {
                 return {
                     success: false,
-                    error: 'El precio debe ser mayor que cero',
+                    error: "El precio debe ser mayor que cero",
                 };
             }
             // Verificar si ya existe el ID del producto
@@ -44,7 +50,7 @@ class ProductoService {
             if (productoExistente) {
                 return {
                     success: false,
-                    error: 'El ID del producto ya está registrado',
+                    error: "El ID del producto ya está registrado",
                 };
             }
             // Guardar producto
@@ -65,10 +71,90 @@ class ProductoService {
             };
         }
         catch (error) {
-            console.error('Error registrando producto:', error);
+            console.error("Error registrando producto:", error);
             return {
                 success: false,
-                error: error.message || 'Error al registrar el producto',
+                error: error.message || "Error al registrar el producto",
+            };
+        }
+    }
+    static async actualizarProducto(idProducto, data) {
+        try {
+            // Verificar si existe el producto
+            const productoExistente = await producto_model_1.ProductoModel.findOne({ idProducto });
+            if (!productoExistente) {
+                return {
+                    success: false,
+                    error: "Producto no encontrado",
+                };
+            }
+            // Preparar los datos para actualizar
+            const datosActualizados = {};
+            // Solo actualizar los campos que vienen en la solicitud
+            if (data.nombre !== undefined)
+                datosActualizados.nombre = String(data.nombre);
+            if (data.cantidad !== undefined) {
+                const cantidad = Number(data.cantidad);
+                if (cantidad < 0) {
+                    return {
+                        success: false,
+                        error: "La cantidad no puede ser negativa",
+                    };
+                }
+                datosActualizados.cantidad = cantidad;
+            }
+            if (data.categoria !== undefined)
+                datosActualizados.categoria = String(data.categoria);
+            if (data.precio !== undefined) {
+                const precio = Number(data.precio);
+                if (precio <= 0) {
+                    return {
+                        success: false,
+                        error: "El precio debe ser mayor que cero",
+                    };
+                }
+                datosActualizados.precio = precio;
+            }
+            if (data.descuento !== undefined)
+                datosActualizados.descuento = Number(data.descuento);
+            if (data.estado !== undefined)
+                datosActualizados.estado = Boolean(data.estado);
+            // Si no hay datos para actualizar
+            if (Object.keys(datosActualizados).length === 0) {
+                return {
+                    success: false,
+                    error: "No se proporcionaron datos para actualizar",
+                };
+            }
+            // Actualizar producto
+            const productoActualizado = await producto_model_1.ProductoModel.findOneAndUpdate({ idProducto }, { $set: datosActualizados }, { new: true } // Devuelve el documento actualizado
+            );
+            // Verificar si se actualizó correctamente
+            if (!productoActualizado) {
+                return {
+                    success: false,
+                    error: "No se pudo actualizar el producto",
+                };
+            }
+            return {
+                success: true,
+                data: {
+                    idProducto: productoActualizado.idProducto,
+                    nombre: productoActualizado.nombre,
+                    cantidad: productoActualizado.cantidad,
+                    categoria: productoActualizado.categoria,
+                    precio: productoActualizado.precio,
+                    descuento: productoActualizado.descuento,
+                    estado: productoActualizado.estado,
+                    fechaCreacionProducto: productoActualizado.fechaCreacionProducto,
+                },
+            };
+        }
+        catch (error) {
+            console.error("Error actualizando producto:", error);
+            return {
+                success: false,
+                error: error.message || "Error al actualizar el producto",
             };
         }
     }

@@ -1,11 +1,20 @@
-import Router from "express"
-import { ProductoService } from "../services/producto.service"
+import Router from "express";
+
 import { ProductoController } from "../controllers/producto.controller";
+import { authenticateToken } from "../middlewares/authenticateToken";
 
+const router = Router();
 
-const router=Router()
+router.post(
+  "/registrar-producto",
+  authenticateToken,
+  ProductoController.registrarProducto
+);
+router.put(
+  "/actualizar-producto/:id",
+  authenticateToken,
+  ProductoController.actualizarProducto
+);
+router.get("/", ProductoController.listar);
 
-router.post("/registrar-producto",ProductoController.registrarProducto);
-router.get("/",ProductoController.listar)
-
-export {router as productoRoutes}
+export { router as productoRoutes };
