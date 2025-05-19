@@ -24,6 +24,8 @@ export class PersonaService {
       // Si se especifica un rol desde el parámetro, lo usamos
       if (rolParam) {
         usuarioData.rol = rolParam;
+      } else {
+        usuarioData.rol = "usuario"; // valor por defecto
       }
 
       // Validar datos con Zod
@@ -67,6 +69,7 @@ export class PersonaService {
         nit: validatedData.nit || undefined,
         nombreEmpresa: validatedData.nombreEmpresa || undefined,
         codigoVendedor: validatedData.codigoVendedor || undefined,
+        ventasRealizadas: validatedData.ventasRealizadas || undefined,
       });
 
       // Guardar en la base de datos

@@ -16,10 +16,9 @@ export interface IVenta extends Document {
   productos: IProductoVenta[];
   IdMetodoPago: string; // solo el id aquí
   total: number;
-vendedor: mongoose.Types.ObjectId;
+  vendedor: mongoose.Types.ObjectId;
 
-
-//  vendedor: mongoose.Types.ObjectId;
+  //  vendedor: mongoose.Types.ObjectId;
 }
 
 const ProductoVentaSchema = new Schema<IProductoVenta>(
@@ -44,11 +43,12 @@ const VentaSchema = new Schema<IVenta>({
   productos: { type: [ProductoVentaSchema], required: true },
   IdMetodoPago: { type: String, required: true },
   total: { type: Number, required: true },
-vendedor: { 
-    type: Schema.Types.ObjectId, 
-    ref: "Usuarios",  // Updated to match the actual model name in PersonaModel
-    required: true 
-  },});
+  vendedor: {
+    type: Schema.Types.ObjectId,
+    ref: "Usuarios", // Updated to match the actual model name in PersonaModel
+    required: true,
+  },
+});
 
 VentaSchema.pre("validate", function (next) {
   if (!this.idVenta) {
@@ -58,10 +58,12 @@ VentaSchema.pre("validate", function (next) {
   next();
 });
 
-
 VentaSchema.pre<IVenta>("save", function (next) {
   this.productos.forEach((p) => {
-    p.subtotal = p.precioUnitario * p.cantidadVendida - (p.descuento || 0) + (p.impuestos || 0);
+    p.subtotal =
+      p.precioUnitario * p.cantidadVendida -
+      (p.descuento || 0) +
+      (p.impuestos || 0);
   });
   this.total = this.productos.reduce((sum, p) => sum + p.subtotal, 0);
   next();

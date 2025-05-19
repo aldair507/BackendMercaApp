@@ -22,8 +22,7 @@ export class VentaController {
       // Registrar la venta con el ID del usuario autenticado como vendedor
       const resultado = await VentaService.registrarVenta(userId, req.body);
 
-
-      console.log(req.body)
+      console.log(req.body);
       if (resultado.success) {
         res.status(201).json(resultado);
       } else {
@@ -38,24 +37,30 @@ export class VentaController {
       });
     }
   }
-  static async obtenerTodasLasVentasController(req: Request, res: Response): Promise<void> {
-  const result = await VentaService.obtenerTodasLasVentas();
-  if (!result.success) {
-    res.status(500).json({ success: false, message: result.error });
-    return;
+  static async obtenerTodasLasVentasController(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const result = await VentaService.obtenerTodasLasVentas();
+    if (!result.success) {
+      res.status(500).json({ success: false, message: result.error });
+      return;
+    }
+    res.status(200).json(result);
   }
-  res.status(200).json(result);
-}
 
-static async obtenerVentasPorVendedorController(req: Request, res: Response): Promise<void> {
-  const { idVendedor } = req.params;
-  const result = await VentaService.obtenerVentasPorVendedor(idVendedor);
-  if (!result.success) {
-    res.status(404).json({ success: false, message: result.error });
-    return;
+  static async obtenerVentasPorVendedorController(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const { idVendedor } = req.params;
+    const result = await VentaService.obtenerVentasPorVendedor(idVendedor);
+    if (!result.success) {
+      res.status(404).json({ success: false, message: result.error });
+      return;
+    }
+    res.status(200).json(result);
   }
-  res.status(200).json(result);
-}
 
-
+  
 }

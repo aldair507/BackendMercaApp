@@ -1,10 +1,11 @@
 import { IPersona } from "./persona.interface";
+import { Types } from "mongoose";
 
 // En tu interfaz IVenta
 export interface IVenta extends Document {
   idVenta: string;
   fechaVenta: Date;
-  vendedor: IPersona;
+  vendedor: Types.ObjectId | IPersona;
   productos: Array<{
     idProducto: string;
     nombre: string;

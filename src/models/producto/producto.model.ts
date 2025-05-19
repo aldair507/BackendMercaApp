@@ -8,6 +8,7 @@ export interface IProducto extends Document {
   precio: number;
   estado: boolean;
   descuento: number;
+  impuestos:number;
   fechaCreacionProducto: Date;
 }
 

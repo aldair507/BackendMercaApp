@@ -11,8 +11,7 @@ router.post(
   VentaController.registrarVenta
 );
 router.get("/", VentaController.obtenerTodasLasVentasController);
-router.get("/ventas/:idVendedor", VentaController.obtenerVentasPorVendedorController);
-
+router.get("/:idVendedor", VentaController.obtenerVentasPorVendedorController);
 // router.get('/:vendedorId', VentaController.);
 
 export { router as ventaRouter };

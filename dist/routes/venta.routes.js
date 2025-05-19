@@ -9,4 +9,4 @@ const router = (0, express_1.Router)();
 exports.ventaRouter = router;
 router.post("/registrar-venta", authenticateToken_1.authenticateToken, venta_controller_1.VentaController.registrarVenta);
 router.get("/", venta_controller_1.VentaController.obtenerTodasLasVentasController);
-router.get("/ventas/:idVendedor", venta_controller_1.VentaController.obtenerVentasPorVendedorController);
+router.get("/:idVendedor", venta_controller_1.VentaController.obtenerVentasPorVendedorController);

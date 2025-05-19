@@ -56,7 +56,7 @@ const VentaSchema = new mongoose_1.Schema({
     vendedor: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "Usuarios", // Updated to match the actual model name in PersonaModel
-        required: true
+        required: true,
     },
 });
 VentaSchema.pre("validate", function (next) {
@@ -68,7 +68,10 @@ VentaSchema.pre("validate", function (next) {
 });
 VentaSchema.pre("save", function (next) {
     this.productos.forEach((p) => {
-        p.subtotal = p.precioUnitario * p.cantidadVendida - (p.descuento || 0) + (p.impuestos || 0);
+        p.subtotal =
+            p.precioUnitario * p.cantidadVendida -
+                (p.descuento || 0) +
+                (p.impuestos || 0);
     });
     this.total = this.productos.reduce((sum, p) => sum + p.subtotal, 0);
     next();

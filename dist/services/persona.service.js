@@ -15,6 +15,9 @@ class PersonaService {
             if (rolParam) {
                 usuarioData.rol = rolParam;
             }
+            else {
+                usuarioData.rol = "usuario"; // valor por defecto
+            }
             // Validar datos con Zod
             const validatedData = usuario_types_1.UsuarioSchema.parse({
                 ...usuarioData,
@@ -51,6 +54,7 @@ class PersonaService {
                 nit: validatedData.nit || undefined,
                 nombreEmpresa: validatedData.nombreEmpresa || undefined,
                 codigoVendedor: validatedData.codigoVendedor || undefined,
+                ventasRealizadas: validatedData.ventasRealizadas || undefined,
             });
             // Guardar en la base de datos
             const savedUsuario = await nuevoUsuario.save();

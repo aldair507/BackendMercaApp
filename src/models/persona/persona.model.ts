@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import mongoose, { Schema, model, Document } from "mongoose";
 import { IPersona } from "../../interfaces/persona.interface";
 import z from "zod";
 
@@ -6,7 +6,7 @@ export interface IPersonaDocument extends IPersona, Document {}
 
 const personaSchema = new Schema<IPersonaDocument>(
   {
-    idPersona: { type: Schema.Types.ObjectId, auto: true },
+    idPersona: { type: Schema.Types.ObjectId, default:()=> new mongoose.Types.ObjectId },
     rol: { type: String, required: true },
     estadoPersona: { type: Boolean, required: true },
     nombrePersona: { type: String, required: true },
