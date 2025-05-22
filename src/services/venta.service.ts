@@ -53,63 +53,65 @@ export class VentaService {
     }
   }
 
-// También asegúrate de que procesarProductos mantenga la información completa
-private static async procesarProductos(productos: any[]) {
-  if (!productos || !Array.isArray(productos) || productos.length === 0) {
-    throw new Error("Debe incluir al menos un producto");
-  }
-
-  const resultados = [];
-  const estrategia = new EstrategiaConIVA(); // Estrategia fija, o podrías cambiarla dinámicamente
-
-  for (const producto of productos) {
-    const productoBD = await ProductoModel.findOne({
-      idProducto: producto.idProducto,
-      estado: true,
-    });
-
-    if (!productoBD) {
-      throw new Error(`Producto ${producto.idProducto} no encontrado o inactivo`);
+  // También asegúrate de que procesarProductos mantenga la información completa
+  private static async procesarProductos(productos: any[]) {
+    if (!productos || !Array.isArray(productos) || productos.length === 0) {
+      throw new Error("Debe incluir al menos un producto");
     }
 
-    if (productoBD.cantidad < producto.cantidadVendida) {
-      throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
+    const resultados = [];
+    const estrategia = new EstrategiaConIVA(); // Estrategia fija, o podrías cambiarla dinámicamente
+
+    for (const producto of productos) {
+      const productoBD = await ProductoModel.findOne({
+        idProducto: producto.idProducto,
+        estado: true,
+      });
+
+      if (!productoBD) {
+        throw new Error(
+          `Producto ${producto.idProducto} no encontrado o inactivo`
+        );
+      }
+
+      if (productoBD.cantidad < producto.cantidadVendida) {
+        throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
+      }
+
+      // Usa ProductoVenta y estrategia
+      const productoVenta = new ProductoVenta(
+        productoBD.idProducto,
+        productoBD.nombre,
+        productoBD.categoria,
+        producto.cantidadVendida,
+        productoBD.precio,
+        productoBD.descuento || 0,
+        productoBD.impuestos || 0,
+        estrategia
+      );
+
+      const subtotal = productoVenta.calcularSubtotal();
+
+      // Actualizar stock
+      await ProductoModel.updateOne(
+        { idProducto: productoBD.idProducto },
+        { $inc: { cantidad: -producto.cantidadVendida } }
+      );
+
+      resultados.push({
+        idProducto: productoBD.idProducto,
+        nombre: productoBD.nombre,
+        categoria: productoBD.categoria,
+        cantidadVendida: producto.cantidadVendida,
+        precioUnitario: productoBD.precio,
+        descuento: productoBD.descuento,
+        impuestos: productoBD.impuestos,
+        subtotal,
+      });
     }
 
-    // Usa ProductoVenta y estrategia
-    const productoVenta = new ProductoVenta(
-      productoBD.idProducto,
-      productoBD.nombre,
-      productoBD.categoria,
-      producto.cantidadVendida,
-      productoBD.precio,
-      productoBD.descuento || 0,
-      productoBD.impuestos || 0,
-      estrategia
-    );
-
-    const subtotal = productoVenta.calcularSubtotal();
-
-    // Actualizar stock
-    await ProductoModel.updateOne(
-      { idProducto: productoBD.idProducto },
-      { $inc: { cantidad: -producto.cantidadVendida } }
-    );
-
-    resultados.push({
-      idProducto: productoBD.idProducto,
-      nombre: productoBD.nombre,
-      categoria: productoBD.categoria,
-      cantidadVendida: producto.cantidadVendida,
-      precioUnitario: productoBD.precio,
-      descuento: productoBD.descuento,
-      impuestos: productoBD.impuestos,
-      subtotal,
-    });
+    return resultados;
   }
-
-  return resultados;
-}
 
   // private static async procesarProductos(productos: any[]) {
   //   if (!productos || !Array.isArray(productos) || productos.length === 0) {

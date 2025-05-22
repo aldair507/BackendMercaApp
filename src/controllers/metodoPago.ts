@@ -1,4 +1,5 @@
 import { MetodoPagoModel } from "../models/pagos/metodoPago.models";
+import { Request, Response } from "express";
 
 export async function inicializarMetodosPago() {
   const metodos = [
@@ -20,3 +21,15 @@ export async function inicializarMetodosPago() {
     }
   }
 }
+
+export const traerMetodosPago = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const result = await MetodoPagoModel.find();
+    res.status(201).json(result);
+  } catch (error) {
+    console.log(error);
+  }
+};

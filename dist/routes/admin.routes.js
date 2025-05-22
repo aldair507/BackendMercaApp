@@ -10,13 +10,16 @@ const venta_controller_1 = require("../controllers/venta.controller");
 const producto_controller_1 = require("../controllers/producto.controller");
 const router = (0, express_1.Router)();
 exports.adminRoutes = router;
-router.post("/register", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, Admin_controllers_1.AdminController.registroUsuarioConRol);
-router.post("/registrar-venta", authenticateToken_1.authenticateToken, venta_controller_1.VentaController.registrarVenta);
-router.put("/update/:id", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, persona_controllers_1.UsuarioController.actualizarUsuario);
-router.get("/", venta_controller_1.VentaController.obtenerTodasLasVentasController);
-router.get("/:idVendedor", venta_controller_1.VentaController.obtenerVentasPorVendedorController);
+// Usuarios
+router.post("/registrar-usuario", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, Admin_controllers_1.AdminController.registroUsuarioConRol);
+router.put("/actualizar-usuario/:id", authenticateToken_1.authenticateToken, authenticateAdmin_1.authenticateAdmin, persona_controllers_1.UsuarioController.actualizarUsuario);
 router.get("/usuarios", authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.getUsuarios);
+// Ventas
+router.post("/ventas/registrar-venta", authenticateToken_1.authenticateToken, venta_controller_1.VentaController.registrarVenta);
+router.get("/ventas", venta_controller_1.VentaController.obtenerTodasLasVentasController);
+router.get("/ventas/:id", venta_controller_1.VentaController.obtenerVentasPorVendedorController);
+// Productos
 router.post("/registrar-producto", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.registrarProducto);
 router.put("/actualizar-producto/:id", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.actualizarProducto);
-router.post("/aumentar-stock/", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.aumentarStockController);
-router.get("/", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.listar);
+router.post("/aumentar-stock", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.aumentarStockController);
+router.get("/listar-productos", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.listar);

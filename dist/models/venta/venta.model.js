@@ -54,7 +54,7 @@ const VentaSchema = new mongoose_1.Schema({
     IdMetodoPago: { type: String, required: true },
     total: { type: Number, required: true },
     vendedor: {
-        type: mongoose_1.Schema.Types.ObjectId,
+        type: String,
         ref: "Usuarios", // Updated to match the actual model name in PersonaModel
         required: true,
     },

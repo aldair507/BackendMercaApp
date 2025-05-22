@@ -12,6 +12,7 @@ import { ventaRouter } from "./routes/venta.routes";
 import { productoRoutes } from "./routes/producto.routes";
 import bodyParser from "body-parser";
 import { inicializarMetodosPago } from "./controllers/metodoPago";
+import { metodoPagoRouter } from "./routes/metodoPago.routes";
 
 const app = express();
 
@@ -44,8 +45,9 @@ app.use(cookieParser()); // <-- antes de las rutas
 app.use("/api", usuarioRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
-app.use("/api/ventas", ventaRouter);
+app.use("/api", ventaRouter);
 app.use("/api/productos", productoRoutes);
+app.use("/api/pagos",metodoPagoRouter)
 app.use(
   "/comprobantes",
   express.static(path.join(__dirname, "public/comprobantes"))

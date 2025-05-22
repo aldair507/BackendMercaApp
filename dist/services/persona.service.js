@@ -9,8 +9,6 @@ class PersonaService {
     static async registerUsuario(usuarioData, rolParam) {
         // Guardar datos originales de la solicitud fuera del try para que esté disponible en catch
         try {
-            console.log("Datos recibidos en el servicio:", usuarioData);
-            console.log("Rol recibido:", rolParam);
             // Si se especifica un rol desde el parámetro, lo usamos
             if (rolParam) {
                 usuarioData.rol = rolParam;

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.traerMetodosPago = void 0;
 exports.inicializarMetodosPago = inicializarMetodosPago;
 const metodoPago_models_1 = require("../models/pagos/metodoPago.models");
 async function inicializarMetodosPago() {
@@ -22,3 +23,13 @@ async function inicializarMetodosPago() {
         }
     }
 }
+const traerMetodosPago = async (req, res) => {
+    try {
+        const result = await metodoPago_models_1.MetodoPagoModel.find();
+        res.status(201).json(result);
+    }
+    catch (error) {
+        console.log(error);
+    }
+};
+exports.traerMetodosPago = traerMetodosPago;
