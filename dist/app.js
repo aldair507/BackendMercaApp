@@ -41,7 +41,7 @@ const PORT = 4000;
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cookie_parser_1.default)()); // <-- antes de las rutas
-app.use("/api", usuario_routes_1.usuarioRouter);
+app.use("/api/usuarios", usuario_routes_1.usuarioRouter);
 app.use("/api/auth", auth_routes_1.authRouter);
 app.use("/api/admin", admin_routes_1.adminRoutes);
 app.use("/api", venta_routes_1.ventaRouter);
