@@ -45,7 +45,7 @@ app.use(cookieParser()); // <-- antes de las rutas
 app.use("/api/usuarios", usuarioRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
-app.use("/api", ventaRouter);
+app.use("/api/venta", ventaRouter);
 app.use("/api/productos", productoRoutes);
 app.use("/api/pagos",metodoPagoRouter)
 app.use(

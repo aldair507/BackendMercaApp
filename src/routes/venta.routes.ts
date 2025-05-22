@@ -10,9 +10,9 @@ router.post(
   authenticateToken,
   VentaController.registrarVenta
 );
-router.get("/", VentaController.obtenerTodasLasVentasController);
+router.get("/obtener-ventas", VentaController.obtenerTodasLasVentasController);
 router.get("/:idVendedor", VentaController.obtenerVentasPorVendedorController);
 
-// router.get('/:vendedorId', VentaController.);
+
 
 export { router as ventaRouter };

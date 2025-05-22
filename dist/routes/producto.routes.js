@@ -12,4 +12,4 @@ exports.productoRoutes = router;
 router.post("/registrar-producto", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.registrarProducto);
 router.put("/actualizar-producto/:id", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.actualizarProducto);
 router.post("/aumentar-stock/", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.aumentarStockController);
-router.get("/", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.listar);
+router.get("/listar-productos", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.listar);
