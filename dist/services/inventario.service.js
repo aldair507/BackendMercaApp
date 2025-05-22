@@ -44,11 +44,11 @@ class Inventario {
             ],
         });
     }
-    // 4. Guardar nuevo producto
-    async guardarProducto(productoData) {
-        const producto = new producto_model_1.ProductoModel(productoData);
-        return await producto.save();
-    }
+    // // 4. Guardar nuevo producto
+    // async guardarProducto(productoData: IProductoCreate) {
+    //   const producto = new ProductoModel(productoData);
+    //   return await producto.save();
+    // }
     async aumentarStock(idProducto, cantidadAumentar) {
         const producto = await producto_model_1.ProductoModel.findOne({ idProducto });
         if (!producto)
@@ -74,11 +74,6 @@ class Inventario {
     // 6. Desactivar producto (soft delete)
     async desactivarProducto(idProducto) {
         return await producto_model_1.ProductoModel.findOneAndUpdate({ idProducto }, { estado: false }, { new: true });
-    }
-    // 7. Calcular el valor total del inventario
-    async calcularValorTotalInventario() {
-        const productos = await producto_model_1.ProductoModel.find({ estado: true });
-        return productos.reduce((total, prod) => total + prod.precio * prod.cantidad, 0);
     }
 }
 exports.Inventario = Inventario;

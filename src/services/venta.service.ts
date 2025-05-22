@@ -1,7 +1,9 @@
 import { VentaModel } from "../models/venta/venta.model";
 import { PersonaModel } from "../models/persona/persona.model";
 import { ProductoModel } from "../models/producto/producto.model";
-
+import { EstrategiaConIVA } from "../estrategias/estrategiaIva";
+import { ProductoVenta } from "../models/venta/productoVenta";
+import { ComprobanteService } from "./comprobante.service";
 export class VentaService {
   static async registrarVenta(vendedorId: string, ventaData: any) {
     try {
@@ -51,60 +53,118 @@ export class VentaService {
     }
   }
 
-  private static async procesarProductos(productos: any[]) {
-    if (!productos || !Array.isArray(productos) || productos.length === 0) {
-      throw new Error("Debe incluir al menos un producto");
-    }
-
-    const resultados = [];
-
-    for (const producto of productos) {
-      const productoBD = await ProductoModel.findOne({
-        idProducto: producto.idProducto,
-        estado: true,
-      });
-
-      if (!productoBD) {
-        throw new Error(
-          `Producto ${producto.idProducto} no encontrado o inactivo`
-        );
-      }
-
-      if (productoBD.cantidad < producto.cantidadVendida) {
-        throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
-      }
-
-      // Cálculos
-      const precioUnitario = productoBD.precio;
-      const descuento = productoBD.descuento || 0;
-      const impuestos = productoBD.impuestos || 0;
-      const subtotal = precioUnitario * producto.cantidadVendida;
-      const descuentoAplicado = subtotal * (descuento / 100);
-      const impuestosAplicados =
-        (subtotal - descuentoAplicado) * (impuestos / 100);
-      const subtotalConImpuestos =
-        subtotal - descuentoAplicado + impuestosAplicados;
-
-      // Actualizar stock
-      await ProductoModel.updateOne(
-        { idProducto: productoBD.idProducto },
-        { $inc: { cantidad: -producto.cantidadVendida } }
-      );
-
-      resultados.push({
-        idProducto: productoBD.idProducto,
-        nombre: productoBD.nombre,
-        categoria: productoBD.categoria,
-        cantidadVendida: producto.cantidadVendida,
-        precioUnitario,
-        descuento,
-        impuestos,
-        subtotal: subtotalConImpuestos,
-      });
-    }
-
-    return resultados;
+// También asegúrate de que procesarProductos mantenga la información completa
+private static async procesarProductos(productos: any[]) {
+  if (!productos || !Array.isArray(productos) || productos.length === 0) {
+    throw new Error("Debe incluir al menos un producto");
   }
+
+  const resultados = [];
+  const estrategia = new EstrategiaConIVA(); // Estrategia fija, o podrías cambiarla dinámicamente
+
+  for (const producto of productos) {
+    const productoBD = await ProductoModel.findOne({
+      idProducto: producto.idProducto,
+      estado: true,
+    });
+
+    if (!productoBD) {
+      throw new Error(`Producto ${producto.idProducto} no encontrado o inactivo`);
+    }
+
+    if (productoBD.cantidad < producto.cantidadVendida) {
+      throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
+    }
+
+    // Usa ProductoVenta y estrategia
+    const productoVenta = new ProductoVenta(
+      productoBD.idProducto,
+      productoBD.nombre,
+      productoBD.categoria,
+      producto.cantidadVendida,
+      productoBD.precio,
+      productoBD.descuento || 0,
+      productoBD.impuestos || 0,
+      estrategia
+    );
+
+    const subtotal = productoVenta.calcularSubtotal();
+
+    // Actualizar stock
+    await ProductoModel.updateOne(
+      { idProducto: productoBD.idProducto },
+      { $inc: { cantidad: -producto.cantidadVendida } }
+    );
+
+    resultados.push({
+      idProducto: productoBD.idProducto,
+      nombre: productoBD.nombre,
+      categoria: productoBD.categoria,
+      cantidadVendida: producto.cantidadVendida,
+      precioUnitario: productoBD.precio,
+      descuento: productoBD.descuento,
+      impuestos: productoBD.impuestos,
+      subtotal,
+    });
+  }
+
+  return resultados;
+}
+
+  // private static async procesarProductos(productos: any[]) {
+  //   if (!productos || !Array.isArray(productos) || productos.length === 0) {
+  //     throw new Error("Debe incluir al menos un producto");
+  //   }
+
+  //   const resultados = [];
+
+  //   for (const producto of productos) {
+  //     const productoBD = await ProductoModel.findOne({
+  //       idProducto: producto.idProducto,
+  //       estado: true,
+  //     });
+
+  //     if (!productoBD) {
+  //       throw new Error(
+  //         `Producto ${producto.idProducto} no encontrado o inactivo`
+  //       );
+  //     }
+
+  //     if (productoBD.cantidad < producto.cantidadVendida) {
+  //       throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
+  //     }
+
+  //     // Cálculos
+  //     const precioUnitario = productoBD.precio;
+  //     const descuento = productoBD.descuento || 0;
+  //     const impuestos = productoBD.impuestos || 0;
+  //     const subtotal = precioUnitario * producto.cantidadVendida;
+  //     const descuentoAplicado = subtotal * (descuento / 100);
+  //     const impuestosAplicados =
+  //       (subtotal - descuentoAplicado) * (impuestos / 100);
+  //     const subtotalConImpuestos =
+  //       subtotal - descuentoAplicado + impuestosAplicados;
+
+  //     // Actualizar stock
+  //     await ProductoModel.updateOne(
+  //       { idProducto: productoBD.idProducto },
+  //       { $inc: { cantidad: -producto.cantidadVendida } }
+  //     );
+
+  //     resultados.push({
+  //       idProducto: productoBD.idProducto,
+  //       nombre: productoBD.nombre,
+  //       categoria: productoBD.categoria,
+  //       cantidadVendida: producto.cantidadVendida,
+  //       precioUnitario,
+  //       descuento,
+  //       impuestos,
+  //       subtotal: subtotalConImpuestos,
+  //     });
+  //   }
+
+  //   return resultados;
+  // }
 
   private static async actualizarVentasVendedor(
     vendedorId: string,

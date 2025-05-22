@@ -49,11 +49,11 @@ export class Inventario {
     });
   }
 
-  // 4. Guardar nuevo producto
-  async guardarProducto(productoData: IProductoCreate) {
-    const producto = new ProductoModel(productoData);
-    return await producto.save();
-  }
+  // // 4. Guardar nuevo producto
+  // async guardarProducto(productoData: IProductoCreate) {
+  //   const producto = new ProductoModel(productoData);
+  //   return await producto.save();
+  // }
 
   async aumentarStock(idProducto: string, cantidadAumentar: number) {
     const producto = await ProductoModel.findOne({ idProducto });
@@ -91,12 +91,12 @@ export class Inventario {
     );
   }
 
-  // 7. Calcular el valor total del inventario
-  async calcularValorTotalInventario() {
-    const productos = await ProductoModel.find({ estado: true });
-    return productos.reduce(
-      (total, prod) => total + prod.precio * prod.cantidad,
-      0
-    );
-  }
+  // // 7. Calcular el valor total del inventario
+  // async calcularValorTotalInventario() {
+  //   const productos = await ProductoModel.find({ estado: true });
+  //   return productos.reduce(
+  //     (total, prod) => total + prod.precio * prod.cantidad,
+  //     0
+  //   );
+  // }
 }

@@ -4,6 +4,8 @@ exports.VentaService = void 0;
 const venta_model_1 = require("../models/venta/venta.model");
 const persona_model_1 = require("../models/persona/persona.model");
 const producto_model_1 = require("../models/producto/producto.model");
+const estrategiaIva_1 = require("../estrategias/estrategiaIva");
+const productoVenta_1 = require("../models/venta/productoVenta");
 class VentaService {
     static async registrarVenta(vendedorId, ventaData) {
         try {
@@ -43,11 +45,13 @@ class VentaService {
             };
         }
     }
+    // También asegúrate de que procesarProductos mantenga la información completa
     static async procesarProductos(productos) {
         if (!productos || !Array.isArray(productos) || productos.length === 0) {
             throw new Error("Debe incluir al menos un producto");
         }
         const resultados = [];
+        const estrategia = new estrategiaIva_1.EstrategiaConIVA(); // Estrategia fija, o podrías cambiarla dinámicamente
         for (const producto of productos) {
             const productoBD = await producto_model_1.ProductoModel.findOne({
                 idProducto: producto.idProducto,
@@ -59,14 +63,9 @@ class VentaService {
             if (productoBD.cantidad < producto.cantidadVendida) {
                 throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
             }
-            // Cálculos
-            const precioUnitario = productoBD.precio;
-            const descuento = productoBD.descuento || 0;
-            const impuestos = productoBD.impuestos || 0;
-            const subtotal = precioUnitario * producto.cantidadVendida;
-            const descuentoAplicado = subtotal * (descuento / 100);
-            const impuestosAplicados = (subtotal - descuentoAplicado) * (impuestos / 100);
-            const subtotalConImpuestos = subtotal - descuentoAplicado + impuestosAplicados;
+            // Usa ProductoVenta y estrategia
+            const productoVenta = new productoVenta_1.ProductoVenta(productoBD.idProducto, productoBD.nombre, productoBD.categoria, producto.cantidadVendida, productoBD.precio, productoBD.descuento || 0, productoBD.impuestos || 0, estrategia);
+            const subtotal = productoVenta.calcularSubtotal();
             // Actualizar stock
             await producto_model_1.ProductoModel.updateOne({ idProducto: productoBD.idProducto }, { $inc: { cantidad: -producto.cantidadVendida } });
             resultados.push({
@@ -74,14 +73,60 @@ class VentaService {
                 nombre: productoBD.nombre,
                 categoria: productoBD.categoria,
                 cantidadVendida: producto.cantidadVendida,
-                precioUnitario,
-                descuento,
-                impuestos,
-                subtotal: subtotalConImpuestos,
+                precioUnitario: productoBD.precio,
+                descuento: productoBD.descuento,
+                impuestos: productoBD.impuestos,
+                subtotal,
             });
         }
         return resultados;
     }
+    // private static async procesarProductos(productos: any[]) {
+    //   if (!productos || !Array.isArray(productos) || productos.length === 0) {
+    //     throw new Error("Debe incluir al menos un producto");
+    //   }
+    //   const resultados = [];
+    //   for (const producto of productos) {
+    //     const productoBD = await ProductoModel.findOne({
+    //       idProducto: producto.idProducto,
+    //       estado: true,
+    //     });
+    //     if (!productoBD) {
+    //       throw new Error(
+    //         `Producto ${producto.idProducto} no encontrado o inactivo`
+    //       );
+    //     }
+    //     if (productoBD.cantidad < producto.cantidadVendida) {
+    //       throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
+    //     }
+    //     // Cálculos
+    //     const precioUnitario = productoBD.precio;
+    //     const descuento = productoBD.descuento || 0;
+    //     const impuestos = productoBD.impuestos || 0;
+    //     const subtotal = precioUnitario * producto.cantidadVendida;
+    //     const descuentoAplicado = subtotal * (descuento / 100);
+    //     const impuestosAplicados =
+    //       (subtotal - descuentoAplicado) * (impuestos / 100);
+    //     const subtotalConImpuestos =
+    //       subtotal - descuentoAplicado + impuestosAplicados;
+    //     // Actualizar stock
+    //     await ProductoModel.updateOne(
+    //       { idProducto: productoBD.idProducto },
+    //       { $inc: { cantidad: -producto.cantidadVendida } }
+    //     );
+    //     resultados.push({
+    //       idProducto: productoBD.idProducto,
+    //       nombre: productoBD.nombre,
+    //       categoria: productoBD.categoria,
+    //       cantidadVendida: producto.cantidadVendida,
+    //       precioUnitario,
+    //       descuento,
+    //       impuestos,
+    //       subtotal: subtotalConImpuestos,
+    //     });
+    //   }
+    //   return resultados;
+    // }
     static async actualizarVentasVendedor(vendedorId, ventaId) {
         // Esta operación creará el campo ventasRealizadas si no existe
         const result = await persona_model_1.PersonaModel.updateOne({ idPersona: vendedorId }, { $push: { ventasRealizadas: ventaId } });

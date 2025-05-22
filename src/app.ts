@@ -1,5 +1,6 @@
 import express from "express";
 // import { PORT } from "./config/server.config";
+import path from "path";
 import { connectDB } from "./config/database";
 import { usuarioRouter } from "./routes/usuario.routes";
 import cookieParser from "cookie-parser";
@@ -9,7 +10,7 @@ import { adminRoutes } from "./routes/admin.routes";
 import cors from "cors";
 import { ventaRouter } from "./routes/venta.routes";
 import { productoRoutes } from "./routes/producto.routes";
-import bodyParser from 'body-parser';
+import bodyParser from "body-parser";
 import { inicializarMetodosPago } from "./controllers/metodoPago";
 
 const app = express();
@@ -45,13 +46,19 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
 app.use("/api/ventas", ventaRouter);
 app.use("/api/productos", productoRoutes);
+app.use(
+  "/comprobantes",
+  express.static(path.join(__dirname, "public/comprobantes"))
+);
 app.get("/test", (req, res) => {
   res.json({ success: true, message: "Ruta de prueba funcionando" });
 });
 
+
+
 connectDB();
 
-app.listen(PORT || 4000, '0.0.0.0', () => {
+app.listen(PORT || 4000, "0.0.0.0", () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
 
