@@ -13,6 +13,6 @@ router.post(
 router.get("/obtener-ventas", VentaController.obtenerTodasLasVentasController);
 router.get("/:idVendedor", VentaController.obtenerVentasPorVendedorController);
 
-
+  
 
 export { router as ventaRouter };

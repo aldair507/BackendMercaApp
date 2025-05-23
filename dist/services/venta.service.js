@@ -197,23 +197,26 @@ class VentaService {
     static async obtenerVentasPorVendedor(idPersona) {
         try {
             console.log("Buscando ventas para vendedor con ID:", idPersona);
-            // Verificar si el ID es un ObjectId válido para MongoDB
-            const mongoose = require("mongoose");
-            // Usar 'any' para evitar problemas de tipo con operadores de MongoDB
-            let query = { vendedor: idPersona };
-            // Si parece ser un ObjectId válido, asegurarnos de que funcione con ambos formatos
-            if (mongoose.Types.ObjectId.isValid(idPersona)) {
-                // Crear una consulta OR que busque tanto el string como el ObjectId
-                query = {
-                    $or: [
-                        { vendedor: idPersona },
-                        { vendedor: new mongoose.Types.ObjectId(idPersona) },
-                    ],
+            // Verificar si el vendedor existe
+            const persona = await persona_model_1.PersonaModel.findOne({ idPersona })
+                .select("idPersona nombrePersona apellido")
+                .lean();
+            if (!persona) {
+                return {
+                    success: false,
+                    mensaje: "Vendedor no encontrado",
                 };
             }
-            // Obtener ventas del vendedor específico con el query mejorado
-            const ventas = await venta_model_1.VentaModel.find(query).lean();
-            console.log(`Se encontraron ${ventas.length} ventas para el vendedor ${idPersona}`);
+            console.log("Persona encontrada:", persona);
+            // CORRECCIÓN: Convertir idPersona a ObjectId para la consulta
+            const mongoose = require('mongoose');
+            const ObjectId = mongoose.Types.ObjectId;
+            // Asegurarse de que idPersona sea un ObjectId válido
+            const idPersonaObjectId = new ObjectId(idPersona);
+            const ventas = await venta_model_1.VentaModel.find({ vendedor: idPersonaObjectId }).lean();
+            // Alternativa más simple que también debería funcionar:
+            // const ventas = await VentaModel.find({ vendedor: idPersona }).lean();
+            console.log(`Se encontraron ${ventas.length} ventas para el vendedor ${idPersona}`, ventas);
             if (ventas.length === 0) {
                 return {
                     success: true,
@@ -233,13 +236,11 @@ class VentaService {
                 .lean();
             // Crear mapa para acceso rápido a productos por ID
             const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
-            let vendedor = await persona_model_1.PersonaModel.findOne({ idPersona })
-                .select("idPersona nombrePersona apellido")
-                .lean();
-            const vendedorInfo = vendedor || {
-                _id: idPersona,
-                nombrePersona: "No disponible",
-                apellido: "",
+            const vendedorInfo = {
+                _id: persona._id,
+                idPersona: persona.idPersona,
+                nombrePersona: persona.nombrePersona,
+                apellido: persona.apellido,
             };
             // Procesar todas las ventas añadiendo información de productos
             const ventasConDatos = ventas.map((venta) => {

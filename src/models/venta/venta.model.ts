@@ -16,7 +16,7 @@ export interface IVenta extends Document {
   productos: IProductoVenta[];
   IdMetodoPago: string; // solo el id aquí
   total: number;
-  vendedor: string;
+  vendedor: mongoose.Types.ObjectId;
 
   //  vendedor: mongoose.Types.ObjectId;
 }
@@ -43,12 +43,12 @@ const VentaSchema = new Schema<IVenta>({
   productos: { type: [ProductoVentaSchema], required: true },
   IdMetodoPago: { type: String, required: true },
   total: { type: Number, required: true },
-  vendedor: {
-    type: String,
-    ref: "Usuarios", // Updated to match the actual model name in PersonaModel
+   vendedor: {
+    type: Schema.Types.ObjectId,
+    ref: "Usuarios",
     required: true,
   },
-});
+  });
 
 VentaSchema.pre("validate", function (next) {
   if (!this.idVenta) {

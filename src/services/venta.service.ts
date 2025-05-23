@@ -253,110 +253,113 @@ export class VentaService {
       };
     }
   }
+static async obtenerVentasPorVendedor(idPersona: string) {
+  try {
+    console.log("Buscando ventas para vendedor con ID:", idPersona);
 
-  static async obtenerVentasPorVendedor(idPersona: string) {
-    try {
-      console.log("Buscando ventas para vendedor con ID:", idPersona);
+    // Verificar si el vendedor existe
+    const persona = await PersonaModel.findOne({ idPersona })
+      .select("idPersona nombrePersona apellido")
+      .lean();
 
-      // Verificar si el ID es un ObjectId válido para MongoDB
-      const mongoose = require("mongoose");
-
-      // Usar 'any' para evitar problemas de tipo con operadores de MongoDB
-      let query: any = { vendedor: idPersona };
-
-      // Si parece ser un ObjectId válido, asegurarnos de que funcione con ambos formatos
-      if (mongoose.Types.ObjectId.isValid(idPersona)) {
-        // Crear una consulta OR que busque tanto el string como el ObjectId
-        query = {
-          $or: [
-            { vendedor: idPersona },
-            { vendedor: new mongoose.Types.ObjectId(idPersona) },
-          ],
-        };
-      }
-
-      // Obtener ventas del vendedor específico con el query mejorado
-      const ventas = await VentaModel.find(query).lean();
-      console.log(
-        `Se encontraron ${ventas.length} ventas para el vendedor ${idPersona}`
-      );
-
-      if (ventas.length === 0) {
-        return {
-          success: true,
-          data: [],
-          mensaje: "No se encontraron ventas para este vendedor",
-        };
-      }
-
-      // Obtener todos los IDs de productos únicos
-      const todosProductosIds = [
-        ...new Set(ventas.flatMap((v) => v.productos.map((p) => p.idProducto))),
-      ];
-
-      // Buscar todos los productos relevantes en una sola consulta
-      const productos = await ProductoModel.find({
-        idProducto: { $in: todosProductosIds },
-      })
-        .select("idProducto nombre categoria")
-        .lean();
-
-      // Crear mapa para acceso rápido a productos por ID
-      const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
-
-      let vendedor = await PersonaModel.findOne({ idPersona })
-        .select("idPersona nombrePersona apellido")
-        .lean();
-
-      const vendedorInfo = vendedor || {
-        _id: idPersona,
-        nombrePersona: "No disponible",
-        apellido: "",
+    if (!persona) {
+      return {
+        success: false,
+        mensaje: "Vendedor no encontrado",
       };
+    }
 
-      // Procesar todas las ventas añadiendo información de productos
-      const ventasConDatos = ventas.map((venta) => {
-        // Procesar productos de la venta
-        const productosConDatos = venta.productos.map((productoVenta) => {
-          const producto = productosMap.get(productoVenta.idProducto) || {
-            nombre: "Producto no encontrado",
-            categoria: "Sin categoría",
-          };
+    console.log("Persona encontrada:", persona);
 
-          return {
-            ...productoVenta,
-            producto: {
-              nombre: producto.nombre,
-              categoria: producto.categoria,
-            },
-          };
-        });
+    // CORRECCIÓN: Convertir idPersona a ObjectId para la consulta
+    const mongoose = require('mongoose');
+    const ObjectId = mongoose.Types.ObjectId;
+    
+    // Asegurarse de que idPersona sea un ObjectId válido
+    const idPersonaObjectId = new ObjectId(idPersona);
+    const ventas = await VentaModel.find({ vendedor: idPersonaObjectId }).lean();
+    
+    // Alternativa más simple que también debería funcionar:
+    // const ventas = await VentaModel.find({ vendedor: idPersona }).lean();
+    
+    console.log(
+      `Se encontraron ${ventas.length} ventas para el vendedor ${idPersona}`,
+      ventas
+    );
 
-        // Retornar venta con datos enriquecidos
+    if (ventas.length === 0) {
+      return {
+        success: true,
+        data: [],
+        mensaje: "No se encontraron ventas para este vendedor",
+      };
+    }
+
+    // Obtener todos los IDs de productos únicos
+    const todosProductosIds = [
+      ...new Set(ventas.flatMap((v) => v.productos.map((p) => p.idProducto))),
+    ];
+
+    // Buscar todos los productos relevantes en una sola consulta
+    const productos = await ProductoModel.find({
+      idProducto: { $in: todosProductosIds },
+    })
+      .select("idProducto nombre categoria")
+      .lean();
+
+    // Crear mapa para acceso rápido a productos por ID
+    const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
+
+    const vendedorInfo = {
+      _id: persona._id,
+      idPersona: persona.idPersona,
+      nombrePersona: persona.nombrePersona,
+      apellido: persona.apellido,
+    };
+
+    // Procesar todas las ventas añadiendo información de productos
+    const ventasConDatos = ventas.map((venta) => {
+      // Procesar productos de la venta
+      const productosConDatos = venta.productos.map((productoVenta) => {
+        const producto = productosMap.get(productoVenta.idProducto) || {
+          nombre: "Producto no encontrado",
+          categoria: "Sin categoría",
+        };
+
         return {
-          ...venta,
-          vendedor: vendedorInfo,
-          productos: productosConDatos,
-          idVenta: venta._id.toString(),
+          ...productoVenta,
+          producto: {
+            nombre: producto.nombre,
+            categoria: producto.categoria,
+          },
         };
       });
 
+      // Retornar venta con datos enriquecidos
       return {
-        success: true,
-        data: ventasConDatos,
-        mensaje: "Ventas por vendedor obtenidas correctamente",
+        ...venta,
+        vendedor: vendedorInfo,
+        productos: productosConDatos,
+        idVenta: venta._id.toString(),
       };
-    } catch (error) {
-      console.error("Error al obtener ventas por vendedor:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Error al obtener ventas por vendedor",
-      };
-    }
+    });
+
+    return {
+      success: true,
+      data: ventasConDatos,
+      mensaje: "Ventas por vendedor obtenidas correctamente",
+    };
+  } catch (error) {
+    console.error("Error al obtener ventas por vendedor:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error al obtener ventas por vendedor",
+    };
   }
+}
 
   /**
    * Versión alternativa: Obtiene ventas con datos básicos de referencia
