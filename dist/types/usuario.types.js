@@ -2,8 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsuarioSchema = void 0;
 const zod_1 = require("zod");
-exports.UsuarioSchema = zod_1.z.object({
-    rol: zod_1.z.string(),
+const baseSchema = zod_1.z.object({
     estadoPersona: zod_1.z.boolean().default(true),
     nombrePersona: zod_1.z.string(),
     apellido: zod_1.z.string(),
@@ -11,9 +10,26 @@ exports.UsuarioSchema = zod_1.z.object({
     identificacion: zod_1.z.number(),
     correo: zod_1.z.string().email(),
     password: zod_1.z.string().min(6),
-    // Campos opcionales específicos para microempresarios y vendedores
-    nit: zod_1.z.string().optional(),
-    nombreEmpresa: zod_1.z.string().optional(),
-    codigoVendedor: zod_1.z.string().optional(),
-    // Aseguramos que todas las propiedades desconocidas también pasen la validación
-}).passthrough();
+});
+// Microempresario
+const microempresarioSchema = baseSchema.extend({
+    rol: zod_1.z.literal("microempresario"),
+    nit: zod_1.z.string(),
+    nombreEmpresa: zod_1.z.string(),
+});
+// Vendedor
+const vendedorSchema = baseSchema.extend({
+    rol: zod_1.z.literal("vendedor"),
+    codigoVendedor: zod_1.z.string(),
+    ventasRealizadas: zod_1.z.array(zod_1.z.string()).optional(),
+});
+// Usuario normal
+const usuarioComunSchema = baseSchema.extend({
+    rol: zod_1.z.literal("usuario"),
+});
+// Unión discriminada
+exports.UsuarioSchema = zod_1.z.discriminatedUnion("rol", [
+    microempresarioSchema,
+    vendedorSchema,
+    usuarioComunSchema,
+]);

@@ -18,10 +18,6 @@ const PersonaSchema = new Schema<IPersonaDocument>(
     correo: { type: String, required: true },
     password: { type: String, required: true },
     fechaCreacionPersona: { type: Date, default: Date.now },
-    nit: { type: String },
-    nombreEmpresa: { type: String },
-    codigoVendedor: { type: String },
-    ventasRealizadas: [{ type: Schema.Types.ObjectId, ref: "Venta" }],
   },
   {
     timestamps: true,

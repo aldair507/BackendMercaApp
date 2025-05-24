@@ -7,28 +7,18 @@ const usuario_types_1 = require("../types/usuario.types");
 const generateToken_1 = require("../middlewares/generateToken");
 class PersonaService {
     static async registerUsuario(usuarioData, rolParam) {
-        // Guardar datos originales de la solicitud fuera del try para que esté disponible en catch
         try {
-            // Si se especifica un rol desde el parámetro, lo usamos
-            if (rolParam) {
-                usuarioData.rol = rolParam;
-            }
-            else {
-                usuarioData.rol = "usuario"; // valor por defecto
-            }
-            // Validar datos con Zod
+            // Asignar rol (por parámetro o por defecto)
+            usuarioData.rol = rolParam ?? "usuario";
+            // Validar con Zod (normalizando edad e identificación)
             const validatedData = usuario_types_1.UsuarioSchema.parse({
                 ...usuarioData,
                 edad: Number(usuarioData.edad),
                 identificacion: Number(usuarioData.identificacion),
             });
-            // Verificar si el usuario ya existe por correo
+            // Validar si ya existe correo o identificación
             const usuarioExistenteCorreo = await persona_model_1.PersonaModel.findOne({
                 correo: validatedData.correo,
-            });
-            // Verificar si el usuario ya existe por identificación
-            const usuarioExistenteId = await persona_model_1.PersonaModel.findOne({
-                identificacion: validatedData.identificacion,
             });
             if (usuarioExistenteCorreo) {
                 return {
@@ -36,6 +26,9 @@ class PersonaService {
                     error: "El correo electrónico ya está registrado",
                 };
             }
+            const usuarioExistenteId = await persona_model_1.PersonaModel.findOne({
+                identificacion: validatedData.identificacion,
+            });
             if (usuarioExistenteId) {
                 return {
                     success: false,
@@ -48,15 +41,18 @@ class PersonaService {
                 estadoPersona: validatedData.estadoPersona ?? true,
                 password: await (0, auth_utils_1.hashPassword)(validatedData.password),
                 fechaCreacionPersona: new Date(),
-                // Aseguramos que los campos opcionales se pasen correctamente
-                nit: validatedData.nit || undefined,
-                nombreEmpresa: validatedData.nombreEmpresa || undefined,
-                codigoVendedor: validatedData.codigoVendedor || undefined,
-                ventasRealizadas: validatedData.ventasRealizadas || undefined,
+                ...(validatedData.rol === "microempresario" && {
+                    nit: validatedData.nit,
+                    nombreEmpresa: validatedData.nombreEmpresa,
+                }),
+                ...(validatedData.rol === "vendedor" && {
+                    codigoVendedor: validatedData.codigoVendedor,
+                    ventasRealizadas: validatedData.ventasRealizadas,
+                }),
             });
-            // Guardar en la base de datos
+            // Guardar en BD
             const savedUsuario = await nuevoUsuario.save();
-            // Generar token de autenticación
+            // Generar token
             const token = (0, generateToken_1.generateToken)(savedUsuario.idPersona.toString(), savedUsuario.rol);
             // Preparar respuesta sin password
             const usuarioResponse = savedUsuario.toObject();
@@ -78,7 +74,6 @@ class PersonaService {
         }
     }
     static async actualizarDatosUsuario(id, datosActualizados, permitirCambioDeRol = false) {
-        //  Validación temprana
         if (!id) {
             return {
                 success: false,
@@ -86,57 +81,98 @@ class PersonaService {
                 code: 400,
             };
         }
-        console.log(id);
         try {
-            //  Buscar usuario por idPersona
-            const usuarioExistente = await this.obtenerUsuarioPorId(id);
-            if (!usuarioExistente.success) {
-                return {
-                    success: false,
-                    error: usuarioExistente.error || "Usuario no encontrado",
-                    code: 404,
-                };
+            // Obtener usuario actual para saber el rol anterior
+            const usuarioExistente = await persona_model_1.PersonaModel.findOne({ idPersona: id }).lean();
+            if (!usuarioExistente) {
+                return { success: false, error: "Usuario no encontrado", code: 404 };
             }
-            // Convertir datos numéricos si existen
-            const normalizado = {
-                ...datosActualizados,
-                ...(datosActualizados.edad && { edad: Number(datosActualizados.edad) }),
-                ...(datosActualizados.identificacion && {
-                    identificacion: Number(datosActualizados.identificacion),
-                }),
-            };
-            //  Validar datos actualizables
-            const updatesToApply = usuario_types_1.UsuarioSchema.partial().parse(normalizado);
-            const updatePayload = { ...updatesToApply };
-            //  Bloquear cambio de rol si no está permitido
-            if (!permitirCambioDeRol) {
-                delete updatePayload.rol;
+            // Bloquear cambio de rol si no permitido
+            if (!permitirCambioDeRol && "rol" in datosActualizados) {
+                delete datosActualizados.rol;
             }
-            const updatedUser = await persona_model_1.PersonaModel.findOneAndUpdate({ idPersona: id }, {
-                $set: updatePayload,
-                $currentDate: { fechaActualizacionPersona: true },
-            }, {
-                new: true,
-                runValidators: true,
-                select: "-password -__v",
-            }).lean();
-            if (updatePayload.identificacion) {
-                const identificacionExistente = await persona_model_1.PersonaModel.findOne({
-                    identificacion: updatePayload.identificacion,
-                    idPersona: { $ne: id }, // Excluir al usuario actual
+            // Si se cambia el rol, validar campos del nuevo rol
+            if (permitirCambioDeRol && datosActualizados.rol && datosActualizados.rol !== usuarioExistente.rol) {
+                // Aquí validamos con Zod el objeto completo con nuevo rol y los campos necesarios
+                const validacionRol = usuario_types_1.UsuarioSchema.safeParse({
+                    ...usuarioExistente, // datos viejos
+                    ...datosActualizados, // nuevos datos que incluyen el rol nuevo
                 });
-                if (identificacionExistente) {
+                if (!validacionRol.success) {
                     return {
                         success: false,
-                        error: "Ya existe un usuario con esta identificación",
+                        error: "Datos inválidos para el nuevo rol",
+                        validationErrors: validacionRol.error.errors,
                         code: 400,
                     };
                 }
+                // Limpiar campos del rol anterior que ya no corresponden
+                const updatesCleaned = { ...datosActualizados };
+                if (usuarioExistente.rol === "microempresario") {
+                    delete updatesCleaned.nit;
+                    delete updatesCleaned.nombreEmpresa;
+                }
+                if (usuarioExistente.rol === "vendedor") {
+                    delete updatesCleaned.codigoVendedor;
+                    delete updatesCleaned.ventasRealizadas;
+                }
+                if (usuarioExistente.rol === "usuario") {
+                    // No tiene campos extras, nada que limpiar
+                }
+                // Aplicar actualización con datos limpios + nuevos campos para nuevo rol
+                const resultado = await persona_model_1.PersonaModel.findOneAndUpdate({ idPersona: id }, {
+                    $set: {
+                        ...updatesCleaned,
+                        ...validacionRol.data, // los campos para el nuevo rol
+                    },
+                    $currentDate: { fechaActualizacionPersona: true },
+                }, { new: true, runValidators: true, select: "-password -__v" }).lean();
+                if (!resultado) {
+                    return {
+                        success: false,
+                        error: "Error actualizando usuario",
+                        code: 500,
+                    };
+                }
+                return {
+                    success: true,
+                    data: resultado,
+                };
             }
-            return {
-                success: true,
-                data: updatedUser,
-            };
+            else {
+                // Caso común sin cambio de rol: validar solo los datos recibidos
+                const normalizado = {
+                    ...datosActualizados,
+                    ...(datosActualizados.edad && { edad: Number(datosActualizados.edad) }),
+                    ...(datosActualizados.identificacion && {
+                        identificacion: Number(datosActualizados.identificacion),
+                    }),
+                };
+                const safeResult = usuario_types_1.UsuarioSchema.safeParse(normalizado); // .partial() para permitir actualización parcial
+                if (!safeResult.success) {
+                    return {
+                        success: false,
+                        error: "Datos inválidos",
+                        validationErrors: safeResult.error.errors,
+                        code: 400,
+                    };
+                }
+                const updatedUser = await persona_model_1.PersonaModel.findOneAndUpdate({ idPersona: id }, {
+                    $set: safeResult.data,
+                    $currentDate: { fechaActualizacionPersona: true },
+                }, { new: true, runValidators: true, select: "-password -__v" }).lean();
+                if (!updatedUser) {
+                    return {
+                        success: false,
+                        error: "Error actualizando usuario",
+                        code: 500,
+                    };
+                }
+                return {
+                    success: true,
+                    data: updatedUser,
+                };
+            }
         }
         catch (error) {
             console.error(`Error actualizando usuario ${id}:`, error);
@@ -172,12 +208,10 @@ class PersonaService {
         }
     }
     static async cambiarContrasena(idUsuario, datosCambio) {
-        // 1. Validación básica del ID
         if (!idUsuario) {
             return { success: false, error: "ID de usuario inválido", code: 400 };
         }
         try {
-            // 2. Validaciones de contraseña (igual que antes)
             if (datosCambio.nuevaContrasena !== datosCambio.confirmacionNuevaContrasena) {
                 return {
                     success: false,
@@ -185,14 +219,12 @@ class PersonaService {
                     code: 400,
                 };
             }
-            // 3. Obtener usuario con contraseña
             const usuario = await persona_model_1.PersonaModel.findOne({
                 idPersona: idUsuario,
             }).select("+password");
             if (!usuario) {
                 return { success: false, error: "Usuario no encontrado", code: 404 };
             }
-            // 4. Verificar contraseña actual
             const esContrasenaValida = await (0, auth_utils_1.comparePasswords)(datosCambio.contrasenaActual, usuario.password);
             if (!esContrasenaValida) {
                 return {
@@ -201,11 +233,8 @@ class PersonaService {
                     code: 401,
                 };
             }
-            // 5. Hashear nueva contraseña
             const nuevaContrasenaHash = await (0, auth_utils_1.hashPassword)(datosCambio.nuevaContrasena);
-            // 6. Actualizar contraseña usando el _id real del documento
-            const usuarioActualizado = await persona_model_1.PersonaModel.findOneAndUpdate({ _id: usuario._id }, // Usamos el _id del documento encontrado
-            {
+            const usuarioActualizado = await persona_model_1.PersonaModel.findOneAndUpdate({ _id: usuario._id }, {
                 $set: { password: nuevaContrasenaHash },
                 $currentDate: { fechaActualizacionPersona: true },
             }, {
@@ -245,7 +274,6 @@ class PersonaService {
                     error: "No hay usuarios registrados",
                 };
             }
-            // Eliminar campos innecesarios como 'password' y '__v' antes de devolver los usuarios
             const usuarios = respuesta.map((user) => {
                 const { password, __v, ...rest } = user;
                 return rest;

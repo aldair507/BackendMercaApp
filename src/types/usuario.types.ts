@@ -1,21 +1,40 @@
-import { z } from "zod";
+  import { z } from "zod";
+  const baseSchema = z.object({
+    estadoPersona: z.boolean().default(true),
+    nombrePersona: z.string(),
+    apellido: z.string(),
+    edad: z.number(),
+    identificacion: z.number(),
+    correo: z.string().email(),
+    password: z.string().min(6),
+  });
 
-export const UsuarioSchema = z.object({
-  rol: z.string(),
-  estadoPersona: z.boolean().default(true),
-  nombrePersona: z.string(),
-  apellido: z.string(),
-  edad: z.number(),
-  identificacion: z.number(),
-  correo: z.string().email(),
-  password: z.string().min(6),
-  // Campos opcionales específicos para microempresarios y vendedores
-  nit: z.string().optional(),
-  nombreEmpresa: z.string().optional(),
-  codigoVendedor: z.string().optional(),
-  // Aseguramos que todas las propiedades desconocidas también pasen la validación
-}).passthrough();
+  // Microempresario
+  const microempresarioSchema = baseSchema.extend({
+    rol: z.literal("microempresario"),
+    nit: z.string(),
+    nombreEmpresa: z.string(),
+  });
 
+  // Vendedor
+  const vendedorSchema = baseSchema.extend({
+    rol: z.literal("vendedor"),
+    codigoVendedor: z.string(),
+    ventasRealizadas: z.array(z.string()).optional(),
+  });
 
-export type IUsuario = z.infer<typeof UsuarioSchema>;
-export type IUsuarioResponse = Omit<IUsuario, "password"> & { id: string };
+  // Usuario normal
+  const usuarioComunSchema = baseSchema.extend({
+    rol: z.literal("usuario"),
+  });
+
+  // Unión discriminada
+  export const UsuarioSchema = z.discriminatedUnion("rol", [
+    microempresarioSchema,
+    vendedorSchema,
+    usuarioComunSchema,
+  ]);
+
+  export type IUsuario = z.infer<typeof UsuarioSchema>;
+  export type IUsuarioResponse = Omit<IUsuario, "password"> & { id: string };
+    
