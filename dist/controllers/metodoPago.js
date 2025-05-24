@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.traerMetodosPago = void 0;
 exports.inicializarMetodosPago = inicializarMetodosPago;
-const metodoPago_models_1 = require("../models/pagos/metodoPago.models");
+const metodoPago_models_1 = require("../models/metodoPago.models");
 async function inicializarMetodosPago() {
     const metodos = [
         { idMetodoPago: "MP001", nombreMetodoPago: "Efectivo" },
@@ -17,9 +17,6 @@ async function inicializarMetodosPago() {
         if (!existe) {
             await metodoPago_models_1.MetodoPagoModel.create(metodo);
             console.log(`Método de pago creado: ${metodo.nombreMetodoPago}`);
-        }
-        else {
-            console.log(`Método de pago ya existe: ${metodo.nombreMetodoPago}`);
         }
     }
 }

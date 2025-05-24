@@ -1,4 +1,4 @@
-import { ProductoModel } from "../models/producto/producto.model";
+import { ProductoModel } from "../models/producto.model";
 import { IProductoCreate } from "../interfaces/producto.interface";
 
 export class ProductoService {

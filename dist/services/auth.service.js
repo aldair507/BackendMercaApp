@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
-const persona_model_1 = require("../models/persona/persona.model");
+const persona_model_1 = require("../models/persona.model");
 const generateToken_1 = require("../middlewares/generateToken");
 const auth_utils_1 = require("../utils/auth.utils");
 class AuthService {

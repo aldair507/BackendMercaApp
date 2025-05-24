@@ -1,6 +1,6 @@
-import { VentaModel } from "../models/venta/venta.model";
-import { ProductoModel } from "../models/producto/producto.model";
-import { PersonaModel } from "../models/persona/persona.model";
+import { VentaModel } from "../models/venta.model";
+import { ProductoModel } from "../models/producto.model";
+import { PersonaModel } from "../models/persona.model";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";

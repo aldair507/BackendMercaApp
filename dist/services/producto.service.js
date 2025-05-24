@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductoService = void 0;
-const producto_model_1 = require("../models/producto/producto.model");
+const producto_model_1 = require("../models/producto.model");
 class ProductoService {
     static async registrarProducto(data) {
         try {

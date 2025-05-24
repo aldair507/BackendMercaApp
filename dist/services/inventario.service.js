@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Inventario = void 0;
-const producto_model_1 = require("../models/producto/producto.model");
+const producto_model_1 = require("../models/producto.model");
 class Inventario {
     // 1. Listar todos los productos
     async listarProductos() {

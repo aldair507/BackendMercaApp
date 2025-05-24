@@ -10,4 +10,4 @@ router.post("/registro", persona_controllers_1.UsuarioController.registerUsuario
 router.put("/actualizar/:id", authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.actualizarUsuario);
 router.get("/usuario/:id", authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.obtenerUsuario);
 router.post("/cambiar-contrasena/:id", authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.cambiarContrasena);
-router.get("/listar-usuarios", persona_controllers_1.UsuarioController.getUsuarios);
+router.get("/listar-usuarios", authenticateToken_1.authenticateToken, persona_controllers_1.UsuarioController.getUsuarios);

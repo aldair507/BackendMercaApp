@@ -1,9 +1,9 @@
-import { IPersona } from "../interfaces/persona.interface";
-import mongoose, { Schema, Document } from "mongoose";
+import { model } from "mongoose";
 
-export interface IPersonaDocument extends IPersona, Document {}
+import mongoose, { Schema } from "mongoose";
+import { IPersonaDocument } from "../interfaces/persona.interface";
 
-export const personaSchema = new Schema<IPersonaDocument>(
+const PersonaSchema = new Schema<IPersonaDocument>(
   {
     idPersona: {
       type: Schema.Types.ObjectId,
@@ -18,12 +18,14 @@ export const personaSchema = new Schema<IPersonaDocument>(
     correo: { type: String, required: true },
     password: { type: String, required: true },
     fechaCreacionPersona: { type: Date, default: Date.now },
-    nit: { type: String }, // Campo opcional para microempresarios
-    nombreEmpresa: { type: String }, // Campo opcional para microempresarios
-    codigoVendedor: { type: String }, // Campo opcional para vendedores
+    nit: { type: String },
+    nombreEmpresa: { type: String },
+    codigoVendedor: { type: String },
     ventasRealizadas: [{ type: Schema.Types.ObjectId, ref: "Venta" }],
   },
   {
     timestamps: true,
   }
 );
+
+export const PersonaModel = model<IPersonaDocument>("Usuarios", PersonaSchema);

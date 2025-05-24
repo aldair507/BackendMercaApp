@@ -1,13 +1,12 @@
-import { VentaModel } from "../models/venta/venta.model";
-import { PersonaModel } from "../models/persona/persona.model";
-import { ProductoModel } from "../models/producto/producto.model";
-import { EstrategiaConIVA } from "../estrategias/estrategiaIva";
-import { ProductoVenta } from "../models/venta/productoVenta";
-import { ComprobanteService } from "./comprobante.service";
+import { VentaModel } from "../models/venta.model";
+import { PersonaModel } from "../models/persona.model";
+import { ProductoModel } from "../models/producto.model";
+import { EstrategiaConIVA } from "../interfaces/estrategias/estrategiaIva";
+
 export class VentaService {
   static async registrarVenta(vendedorId: string, ventaData: any) {
     try {
-      // 1. Validar vendedor por idPersona
+      // 1. Validar vendedor
       const vendedor = await PersonaModel.findOne({
         idPersona: vendedorId,
         rol: { $in: ["vendedor", "administrador"] },
@@ -18,15 +17,11 @@ export class VentaService {
         throw new Error("Vendedor no válido o no activo");
       }
 
-      // 2. Validar y procesar productos
-      const productosProcesados = await this.procesarProductos(
-        ventaData.productos
-      );
-
-      // 3. Calcular total
+      // 2. Procesar productos y calcular total
+      const productosProcesados = await this.procesarProductos(ventaData.productos);
       const total = productosProcesados.reduce((sum, p) => sum + p.subtotal, 0);
 
-      // 4. Crear y guardar venta
+      // 3. Crear venta
       const nuevaVenta = new VentaModel({
         productos: productosProcesados,
         IdMetodoPago: ventaData.IdMetodoPago,
@@ -36,31 +31,32 @@ export class VentaService {
 
       await nuevaVenta.save();
 
-      // 5. Actualizar vendedor (creará el campo si no existe)
-      await this.actualizarVentasVendedor(vendedorId, nuevaVenta.idVenta);
+      // 4. Actualizar vendedor
+      await PersonaModel.updateOne(
+        { idPersona: vendedorId },
+        { $push: { ventasRealizadas: nuevaVenta.idVenta } }
+      );
 
       return {
         success: true,
-        data: await nuevaVenta,
+        data: nuevaVenta,
         mensaje: "Venta registrada correctamente",
       };
     } catch (error) {
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Error al registrar venta",
+        error: error instanceof Error ? error.message : "Error al registrar venta",
       };
     }
   }
 
-  // También asegúrate de que procesarProductos mantenga la información completa
   private static async procesarProductos(productos: any[]) {
-    if (!productos || !Array.isArray(productos) || productos.length === 0) {
+    if (!productos?.length) {
       throw new Error("Debe incluir al menos un producto");
     }
 
+    const estrategia = new EstrategiaConIVA();
     const resultados = [];
-    const estrategia = new EstrategiaConIVA(); // Estrategia fija, o podrías cambiarla dinámicamente
 
     for (const producto of productos) {
       const productoBD = await ProductoModel.findOne({
@@ -69,28 +65,20 @@ export class VentaService {
       });
 
       if (!productoBD) {
-        throw new Error(
-          `Producto ${producto.idProducto} no encontrado o inactivo`
-        );
+        throw new Error(`Producto ${producto.idProducto} no encontrado o inactivo`);
       }
 
       if (productoBD.cantidad < producto.cantidadVendida) {
         throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
       }
 
-      // Usa ProductoVenta y estrategia
-      const productoVenta = new ProductoVenta(
-        productoBD.idProducto,
-        productoBD.nombre,
-        productoBD.categoria,
-        producto.cantidadVendida,
+      // Calcular subtotal
+      const subtotal = estrategia.calcularSubtotal(
         productoBD.precio,
+        producto.cantidadVendida,
         productoBD.descuento || 0,
-        productoBD.impuestos || 0,
-        estrategia
+        productoBD.impuestos || 0
       );
-
-      const subtotal = productoVenta.calcularSubtotal();
 
       // Actualizar stock
       await ProductoModel.updateOne(
@@ -104,8 +92,8 @@ export class VentaService {
         categoria: productoBD.categoria,
         cantidadVendida: producto.cantidadVendida,
         precioUnitario: productoBD.precio,
-        descuento: productoBD.descuento,
-        impuestos: productoBD.impuestos,
+        descuento: productoBD.descuento || 0,
+        impuestos: productoBD.impuestos || 0,
         subtotal,
       });
     }
@@ -113,128 +101,32 @@ export class VentaService {
     return resultados;
   }
 
-  // private static async procesarProductos(productos: any[]) {
-  //   if (!productos || !Array.isArray(productos) || productos.length === 0) {
-  //     throw new Error("Debe incluir al menos un producto");
-  //   }
-
-  //   const resultados = [];
-
-  //   for (const producto of productos) {
-  //     const productoBD = await ProductoModel.findOne({
-  //       idProducto: producto.idProducto,
-  //       estado: true,
-  //     });
-
-  //     if (!productoBD) {
-  //       throw new Error(
-  //         `Producto ${producto.idProducto} no encontrado o inactivo`
-  //       );
-  //     }
-
-  //     if (productoBD.cantidad < producto.cantidadVendida) {
-  //       throw new Error(`Stock insuficiente para ${productoBD.nombre}`);
-  //     }
-
-  //     // Cálculos
-  //     const precioUnitario = productoBD.precio;
-  //     const descuento = productoBD.descuento || 0;
-  //     const impuestos = productoBD.impuestos || 0;
-  //     const subtotal = precioUnitario * producto.cantidadVendida;
-  //     const descuentoAplicado = subtotal * (descuento / 100);
-  //     const impuestosAplicados =
-  //       (subtotal - descuentoAplicado) * (impuestos / 100);
-  //     const subtotalConImpuestos =
-  //       subtotal - descuentoAplicado + impuestosAplicados;
-
-  //     // Actualizar stock
-  //     await ProductoModel.updateOne(
-  //       { idProducto: productoBD.idProducto },
-  //       { $inc: { cantidad: -producto.cantidadVendida } }
-  //     );
-
-  //     resultados.push({
-  //       idProducto: productoBD.idProducto,
-  //       nombre: productoBD.nombre,
-  //       categoria: productoBD.categoria,
-  //       cantidadVendida: producto.cantidadVendida,
-  //       precioUnitario,
-  //       descuento,
-  //       impuestos,
-  //       subtotal: subtotalConImpuestos,
-  //     });
-  //   }
-
-  //   return resultados;
-  // }
-
-  private static async actualizarVentasVendedor(
-    vendedorId: string,
-    ventaId: any
-  ) {
-    // Esta operación creará el campo ventasRealizadas si no existe
-    const result = await PersonaModel.updateOne(
-      { idPersona: vendedorId },
-      { $push: { ventasRealizadas: ventaId } }
-    );
-
-    if (result.matchedCount === 0) {
-      throw new Error("No se encontró el vendedor para actualizar");
-    }
-  }
-
   static async obtenerTodasLasVentas() {
     try {
-      const ventas = await VentaModel.find().lean();
+      const [ventas, productos] = await Promise.all([
+        VentaModel.find().lean(),
+        ProductoModel.find().select("idProducto nombre categoria").lean()
+      ]);
 
-      // Obtener todos los IDs de productos únicos
-      const todosProductosIds = [
-        ...new Set(ventas.flatMap((v) => v.productos.map((p) => p.idProducto))),
-      ];
-
-      // Buscar todos los productos relevantes en una sola consulta
-      const productos = await ProductoModel.find({
-        idProducto: { $in: todosProductosIds },
-      })
-        .select("idProducto nombre categoria")
-        .lean();
-
-      // Crear mapa para acceso rápido a productos por ID
-      const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
-
-      // Procesar todas las ventas con Promise.all para manejar las consultas en paralelo
+      const productosMap = new Map(productos.map(p => [p.idProducto, p]));
+      
       const ventasConDatos = await Promise.all(
         ventas.map(async (venta) => {
-          // Obtener vendedor
-          const vendedor = await PersonaModel.findOne({
-            idPersona: venta.vendedor,
-          })
+          const vendedor = await PersonaModel.findOne({ idPersona: venta.vendedor })
             .select("idPersona nombrePersona apellido")
             .lean();
 
-          // Procesar productos de la venta
-          const productosConDatos = venta.productos.map((productoVenta) => {
-            const producto = productosMap.get(productoVenta.idProducto) || {
+          const productosConDatos = venta.productos.map(pv => ({
+            ...pv,
+            producto: productosMap.get(pv.idProducto) || {
               nombre: "Producto no encontrado",
               categoria: "Sin categoría",
-            };
+            },
+          }));
 
-            return {
-              ...productoVenta,
-              producto: {
-                nombre: producto.nombre,
-                categoria: producto.categoria,
-              },
-            };
-          });
-
-          // Retornar venta con datos enriquecidos
           return {
             ...venta,
-            vendedor: vendedor || {
-              nombrePersona: "No disponible",
-              apellido: "",
-            },
+            vendedor: vendedor || { nombrePersona: "No disponible", apellido: "" },
             productos: productosConDatos,
           };
         })
@@ -243,125 +135,64 @@ export class VentaService {
       return {
         success: true,
         data: ventasConDatos,
-        mensaje: "Ventas con datos mínimos obtenidas correctamente",
+        mensaje: "Ventas obtenidas correctamente",
       };
     } catch (error) {
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Error al obtener ventas",
+        error: error instanceof Error ? error.message : "Error al obtener ventas",
       };
     }
   }
-static async obtenerVentasPorVendedor(idPersona: string) {
-  try {
-    console.log("Buscando ventas para vendedor con ID:", idPersona);
 
-    // Verificar si el vendedor existe
-    const persona = await PersonaModel.findOne({ idPersona })
-      .select("idPersona nombrePersona apellido")
-      .lean();
+  static async obtenerVentasPorVendedor(idPersona: string) {
+    try {
+      const [persona, ventas] = await Promise.all([
+        PersonaModel.findOne({ idPersona }).select("idPersona nombrePersona apellido").lean(),
+        VentaModel.find({ vendedor: idPersona }).lean()
+      ]);
 
-    if (!persona) {
-      return {
-        success: false,
-        mensaje: "Vendedor no encontrado",
-      };
-    }
+      if (!persona) {
+        return { success: false, mensaje: "Vendedor no encontrado" };
+      }
 
-    console.log("Persona encontrada:", persona);
+      if (!ventas.length) {
+        return {
+          success: true,
+          data: [],
+          mensaje: "No se encontraron ventas para este vendedor",
+        };
+      }
 
-    // CORRECCIÓN: Convertir idPersona a ObjectId para la consulta
-    const mongoose = require('mongoose');
-    const ObjectId = mongoose.Types.ObjectId;
-    
-    // Asegurarse de que idPersona sea un ObjectId válido
-    const idPersonaObjectId = new ObjectId(idPersona);
-    const ventas = await VentaModel.find({ vendedor: idPersonaObjectId }).lean();
-    
-    // Alternativa más simple que también debería funcionar:
-    // const ventas = await VentaModel.find({ vendedor: idPersona }).lean();
-    
-    console.log(
-      `Se encontraron ${ventas.length} ventas para el vendedor ${idPersona}`,
-      ventas
-    );
+      const productosIds = [...new Set(ventas.flatMap(v => v.productos.map(p => p.idProducto)))];
+      const productos = await ProductoModel.find({ idProducto: { $in: productosIds } })
+        .select("idProducto nombre categoria")
+        .lean();
 
-    if (ventas.length === 0) {
+      const productosMap = new Map(productos.map(p => [p.idProducto, p]));
+
+      const ventasConDatos = ventas.map(venta => ({
+        ...venta,
+        vendedor: persona,
+        productos: venta.productos.map(pv => ({
+          ...pv,
+          producto: productosMap.get(pv.idProducto) || {
+            nombre: "Producto no encontrado",
+            categoria: "Sin categoría",
+          },
+        })),
+      }));
+
       return {
         success: true,
-        data: [],
-        mensaje: "No se encontraron ventas para este vendedor",
+        data: ventasConDatos,
+        mensaje: "Ventas por vendedor obtenidas correctamente",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Error al obtener ventas por vendedor",
       };
     }
-
-    // Obtener todos los IDs de productos únicos
-    const todosProductosIds = [
-      ...new Set(ventas.flatMap((v) => v.productos.map((p) => p.idProducto))),
-    ];
-
-    // Buscar todos los productos relevantes en una sola consulta
-    const productos = await ProductoModel.find({
-      idProducto: { $in: todosProductosIds },
-    })
-      .select("idProducto nombre categoria")
-      .lean();
-
-    // Crear mapa para acceso rápido a productos por ID
-    const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
-
-    const vendedorInfo = {
-      _id: persona._id,
-      idPersona: persona.idPersona,
-      nombrePersona: persona.nombrePersona,
-      apellido: persona.apellido,
-    };
-
-    // Procesar todas las ventas añadiendo información de productos
-    const ventasConDatos = ventas.map((venta) => {
-      // Procesar productos de la venta
-      const productosConDatos = venta.productos.map((productoVenta) => {
-        const producto = productosMap.get(productoVenta.idProducto) || {
-          nombre: "Producto no encontrado",
-          categoria: "Sin categoría",
-        };
-
-        return {
-          ...productoVenta,
-          producto: {
-            nombre: producto.nombre,
-            categoria: producto.categoria,
-          },
-        };
-      });
-
-      // Retornar venta con datos enriquecidos
-      return {
-        ...venta,
-        vendedor: vendedorInfo,
-        productos: productosConDatos,
-        idVenta: venta._id.toString(),
-      };
-    });
-
-    return {
-      success: true,
-      data: ventasConDatos,
-      mensaje: "Ventas por vendedor obtenidas correctamente",
-    };
-  } catch (error) {
-    console.error("Error al obtener ventas por vendedor:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Error al obtener ventas por vendedor",
-    };
   }
-}
-
-  /**
-   * Versión alternativa: Obtiene ventas con datos básicos de referencia
-   */
 }

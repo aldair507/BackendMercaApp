@@ -1,4 +1,4 @@
-import { MetodoPagoModel } from "../models/pagos/metodoPago.models";
+import { MetodoPagoModel } from "../models/metodoPago.models";
 import { Request, Response } from "express";
 
 export async function inicializarMetodosPago() {
@@ -16,8 +16,6 @@ export async function inicializarMetodosPago() {
     if (!existe) {
       await MetodoPagoModel.create(metodo);
       console.log(`Método de pago creado: ${metodo.nombreMetodoPago}`);
-    } else {
-      console.log(`Método de pago ya existe: ${metodo.nombreMetodoPago}`);
     }
   }
 }

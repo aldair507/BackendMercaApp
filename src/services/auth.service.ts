@@ -1,4 +1,4 @@
-import { PersonaModel } from "../models/persona/persona.model";
+import { PersonaModel } from "../models/persona.model";
 import { generateToken } from "../middlewares/generateToken";
 import { comparePasswords } from "../utils/auth.utils";
 import { Response } from "express";

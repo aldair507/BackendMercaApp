@@ -10,8 +10,8 @@ router.post(
   authenticateToken,
   VentaController.registrarVenta
 );
-router.get("/obtener-ventas", VentaController.obtenerTodasLasVentasController);
-router.get("/:idVendedor", VentaController.obtenerVentasPorVendedorController);
+router.get("/obtener-ventas",authenticateToken, VentaController.obtenerTodasLasVentasController);
+router.get("/:idVendedor",authenticateToken, VentaController.obtenerVentasPorVendedorController);
 
   
 

@@ -11,8 +11,10 @@ export interface IPersona {
   correo: string;
   password: string;
   fechaCreacionPersona: Date;
-   nit?: string; // Para microempresarios
+  nit?: string; // Para microempresarios
   nombreEmpresa?: string; // Para microempresarios
-  codigoVendedor?: string; // 
+  codigoVendedor?: string; //
   ventasRealizadas: mongoose.Types.ObjectId[];
 }
+
+export interface IPersonaDocument extends IPersona, Document {}

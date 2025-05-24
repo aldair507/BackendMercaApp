@@ -1,4 +1,4 @@
-import { PersonaModel } from "../models/persona/persona.model";
+import { PersonaModel } from "../models/persona.model";
 import { comparePasswords, hashPassword } from "../utils/auth.utils";
 import { IUsuario, UsuarioSchema } from "../types/usuario.types";
 import { generateToken } from "../middlewares/generateToken";

@@ -4,9 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ComprobanteService = void 0;
-const venta_model_1 = require("../models/venta/venta.model");
-const producto_model_1 = require("../models/producto/producto.model");
-const persona_model_1 = require("../models/persona/persona.model");
+const venta_model_1 = require("../models/venta.model");
+const producto_model_1 = require("../models/producto.model");
+const persona_model_1 = require("../models/persona.model");
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));

@@ -1,6 +1,5 @@
 import express from "express";
-// import { PORT } from "./config/server.config";
-import path from "path";
+
 import { connectDB } from "./config/database";
 import { usuarioRouter } from "./routes/usuario.routes";
 import cookieParser from "cookie-parser";
@@ -47,16 +46,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
 app.use("/api/venta", ventaRouter);
 app.use("/api/productos", productoRoutes);
-app.use("/api/pagos",metodoPagoRouter)
-app.use(
-  "/comprobantes",
-  express.static(path.join(__dirname, "public/comprobantes"))
-);
-app.get("/test", (req, res) => {
-  res.json({ success: true, message: "Ruta de prueba funcionando" });
-});
-
-
+app.use("/api/pagos", metodoPagoRouter);
 
 connectDB();
 

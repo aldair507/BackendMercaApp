@@ -1,7 +1,9 @@
+import { model } from "mongoose";
+
 import { Schema } from "mongoose";
 import { IProducto } from "../interfaces/producto.interface";
 
-export const ProductoSchema = new Schema<IProducto>(
+ const ProductoSchema = new Schema<IProducto>(
   {
     idProducto: {
       type: String,
@@ -55,3 +57,4 @@ export const ProductoSchema = new Schema<IProducto>(
     versionKey: false,
   }
 );
+export const ProductoModel = model<IProducto>("Producto", ProductoSchema);

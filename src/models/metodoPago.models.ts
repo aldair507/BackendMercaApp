@@ -1,11 +1,9 @@
-import {model,Schema} from 'mongoose'
-export interface IMetodoPago extends Document {
-  idMetodoPago: string;
-  nombreMetodoPago: string;
-  descripcion?: string;
-}
+import { model } from "mongoose";
+import { IMetodoPago } from "../interfaces/metodoPago.interfaces";
 
-const MetodoPagoSchema = new Schema<IMetodoPago>(
+import { Schema } from "mongoose";
+
+export const MetodoPagoSchema = new Schema<IMetodoPago>(
   {
     idMetodoPago: {
       type: String,

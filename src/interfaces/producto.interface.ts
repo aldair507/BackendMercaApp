@@ -1,25 +1,26 @@
-// src/interfaces/producto.interface.ts
 import { Document } from "mongoose";
 
 export interface IProducto extends Document {
-  idProducto?: string;
+  idProducto: string;
   nombre: string;
   cantidad: number;
   categoria: string;
   precio: number;
-  estado?: boolean; // Hacer opcional ya que tiene valor por defecto
-  descuento?: number;
-  fechaCreacionProducto?: Date; // Hacer opcional ya que se asigna automáticamente
+  estado: boolean;
+  descuento: number;
+  impuestos: number;
+  fechaCreacionProducto: Date;
 }
 
-// Interfaz para creación de productos
+// Opcional para creación sin campos auto generados
 export interface IProductoCreate {
-  idProducto: string; // Cambiado a no opcional
+  idProducto: string;
   nombre: string;
   cantidad: number;
   categoria: string;
   precio: number;
   estado?: boolean;
   descuento?: number;
- fechaCreacionProducto?: Date;
+  impuestos?: number;
+  fechaCreacionProducto?: Date;
 }
