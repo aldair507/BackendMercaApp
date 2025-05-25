@@ -12,8 +12,11 @@ import { productoRoutes } from "./routes/producto.routes";
 import bodyParser from "body-parser";
 import { inicializarMetodosPago } from "./controllers/metodoPago";
 import { metodoPagoRouter } from "./routes/metodoPago.routes";
+import { notificacionRoutes } from "./routes/notificacion.routes";
 
 const app = express();
+import { ACCESS_TOKEN } from "./config/server.config";
+console.log(ACCESS_TOKEN);
 
 inicializarMetodosPago();
 app.use(morgan("dev"));
@@ -47,6 +50,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/venta", ventaRouter);
 app.use("/api/productos", productoRoutes);
 app.use("/api/pagos", metodoPagoRouter);
+app.use("/api/notificaciones", notificacionRoutes);
 
 connectDB();
 

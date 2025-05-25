@@ -95,7 +95,7 @@ export class PersonaService {
   }
 
 public static async actualizarDatosUsuario(
-  id: string,
+  id: object | string,
   datosActualizados: Partial<IUsuario>,
   permitirCambioDeRol = false
 ): Promise<{
