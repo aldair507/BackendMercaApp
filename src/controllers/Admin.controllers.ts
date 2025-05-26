@@ -2,47 +2,56 @@ import { PersonaService } from "../services/persona.service";
 import { Request, Response } from "express";
 
 export class AdminController {
-  public static async registroUsuarioConRol(
+ public static async registroUsuarioConRol(
     req: Request,
     res: Response
-  ): Promise<void> {
+): Promise<void> {
     try {
-      const requestData = req.body;
-      const { rol } = req.body;
+        const requestData = req.body;
+        const { rol } = req.body;
 
-      const rolesPermitidos = [
-        "administrador",
-        "usuario",
-        "vendedor",
-        "microempresario",
-      ];
-      if (rol && !rolesPermitidos.includes(rol)) {
-        res.status(400).json({
-          success: false,
-          message: "Rol no válido",
-          requestData: requestData,
-        }); // OK para salir y no continuar
-      }
+        const rolesPermitidos = [
+            "administrador",
+            "usuario",
+            "vendedor",
+            "microempresario",
+        ];
 
-      const result = await PersonaService.registerUsuario(requestData, rol);
+        // Validar rol y retornar temprano si no es válido
+        if (rol && !rolesPermitidos.includes(rol)) {
+            res.status(400).json({
+                success: false,
+                message: "Rol no válido",
+                requestData
+            });
+            return; // Importante: retornar después de enviar respuesta
+        }
 
-      // Aquí NO debes retornar nada, solo enviar respuesta
-      res.status(201).json({
-        success: true,
-        message: `Usuario registrado exitosamente con rol: ${rol}`,
-        data: result.data,
-        requestData: requestData,
-      });
-      // No return aquí
+        const result = await PersonaService.registerUsuario(requestData, rol);
+
+        if (!result.success) {
+            res.status(400).json({
+                success: false,
+                message: result.error,
+                validationErrors: result.validationErrors,
+                requestData
+            });
+            return;
+        }
+
+        res.status(201).json({
+            success: true,
+            message: `Usuario registrado exitosamente con rol: ${rol}`,
+            data: result.data,
+            requestData
+        });
     } catch (error) {
-      console.error("Error en registroUsuarioConRol:", error);
-
-      // Tampoco retornes aquí
-      res.status(500).json({
-        success: false,
-        message: "Error interno del servidor",
-        requestData: req.body,
-      });
+        console.error("Error en registroUsuarioConRol:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error interno del servidor",
+            requestData: req.body
+        });
     }
-  }
+}
 }

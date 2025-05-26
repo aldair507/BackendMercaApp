@@ -1,43 +1,44 @@
-// Actualización para tu modelo existente - venta.model.ts
-import { IVenta } from "../interfaces/venta.interface";
 import mongoose, { Schema } from "mongoose";
-import { ProductoVentaSchema } from "../models/productoVenta";
+import { IVenta } from "../interfaces/venta.interface";
 
-// Extensión de tu interfaz existente para MercadoPago
-export interface IVentaExtendida extends IVenta {
-  // Campos específicos para MercadoPago
-  paymentId?: string;
-  externalReference?: string;
-  estadoPago?: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  // Información del comprador (opcional)
-  compradorInfo?: {
-    email: string;
-    nombre: string;
-    apellido: string;
-    telefono?: string;
-    direccion?: string;
-  };
-}
-
-export const VentaSchema = new Schema<IVentaExtendida>({
+const ventaSchema = new Schema<IVenta>({
   idVenta: {
     type: String,
-    unique: true,
     required: true,
+    unique: true,
+    default: () => new mongoose.Types.ObjectId().toString()
   },
-  fechaVenta: { type: Date, default: Date.now },
-  productos: { type: [ProductoVentaSchema], required: true },
-  IdMetodoPago: { type: String, required: true },
-  total: { type: Number, required: true },
+  fechaVenta: {
+    type: Date,
+    default: Date.now
+  },
+  productos: [{
+    idProducto: { type: String, required: true },
+    nombre: { type: String },
+    categoria: { type: String },
+    cantidadVendida: { type: Number, required: true },
+    precioUnitario: { type: Number },
+    descuento: { type: Number, default: 0 },
+    impuestos: { type: Number, default: 0 },
+    subtotal: { type: Number }
+  }],
+  IdMetodoPago: {
+    type: String,
+    required: true
+  },
+  total: {
+    type: Number,
+    required: true
+  },
   vendedor: {
     type: Schema.Types.ObjectId,
-    ref: "Usuarios",
-    required: true,
+    required: true
   },
-  // Nuevos campos para MercadoPago
+  
+  // Campos adicionales para MercadoPago
   paymentId: {
     type: String,
-    sparse: true // Permite null pero debe ser único si existe
+    index: true // Permite múltiples documentos con valor null
   },
   externalReference: {
     type: String,
@@ -46,28 +47,23 @@ export const VentaSchema = new Schema<IVentaExtendida>({
   estadoPago: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'cancelled'],
-    default: 'approved' // Para ventas sin pasarela de pago
+    default: 'pending'
   },
   compradorInfo: {
-    email: String,
-    nombre: String,
-    apellido: String,
-    telefono: String,
-    direccion: String
+    email: { type: String },
+    nombre: { type: String },
+    apellido: { type: String },
+    telefono: { type: String },
+    direccion: { type: String }
   }
+}, {
+  timestamps: true
 });
 
-VentaSchema.pre("validate", function (next) {
-  if (!this.idVenta) {
-    // aquí 'this' es any, por eso hay que castear para TS
-    this.idVenta = (this._id as mongoose.Types.ObjectId).toString();
-  }
-  next();
-});
+// Índices para optimizar consultas
+// ventaSchema.index({ vendedor: 1 });
+// ventaSchema.index({ estadoPago: 1 });
+// ventaSchema.index({ paymentId: 1 });
+// ventaSchema.index({ externalReference: 1 });
 
-// Índices para mejorar las consultas de MercadoPago
-VentaSchema.index({ paymentId: 1 });
-VentaSchema.index({ externalReference: 1 });
-VentaSchema.index({ estadoPago: 1 });
-
-export const VentaModel = mongoose.model<IVentaExtendida>("Venta", VentaSchema);
+export const VentaModel = mongoose.model<IVenta>("Venta", ventaSchema);

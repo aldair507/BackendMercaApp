@@ -4,6 +4,7 @@ exports.VentaService = void 0;
 const venta_model_1 = require("../models/venta.model");
 const persona_model_1 = require("../models/persona.model");
 const producto_model_1 = require("../models/producto.model");
+const Pago_service_1 = require("./Pago.service");
 const estrategiaIva_1 = require("../interfaces/estrategias/estrategiaIva");
 class VentaService {
     static async registrarVenta(vendedorId, ventaData) {
@@ -26,15 +27,50 @@ class VentaService {
                 IdMetodoPago: ventaData.IdMetodoPago,
                 total,
                 vendedor: vendedorId,
+                // Si no es efectivo, inicializar con estado pending
+                estadoPago: ventaData.IdMetodoPago.toLowerCase() !== "efectivo" ? "pending" : "completed",
             });
             await nuevaVenta.save();
             // 4. Actualizar vendedor
             await persona_model_1.PersonaModel.updateOne({ idPersona: vendedorId }, { $push: { ventasRealizadas: nuevaVenta.idVenta } });
-            return {
+            // 5. Si el método de pago no es efectivo, crear preferencia de MercadoPago
+            let mercadoPagoResponse = null;
+            if (ventaData.IdMetodoPago.toLowerCase() !== "efectivo") {
+                // Validar que se proporcionen los datos del comprador para MercadoPago
+                if (!ventaData.compradorInfo) {
+                    throw new Error("Los datos del comprador son requeridos para pagos con MercadoPago");
+                }
+                if (!ventaData.compradorInfo.email || !ventaData.compradorInfo.nombre || !ventaData.compradorInfo.apellido) {
+                    throw new Error("Email, nombre y apellido del comprador son requeridos para MercadoPago");
+                }
+                const mercadoPagoData = {
+                    compradorInfo: ventaData.compradorInfo,
+                    redirectUrls: ventaData.redirectUrls,
+                };
+                mercadoPagoResponse = await Pago_service_1.MercadoPagoService.crearPreferenciaPago(nuevaVenta, mercadoPagoData);
+                if (!mercadoPagoResponse.success) {
+                    // Si falla la creación de la preferencia, revertir la venta
+                    await venta_model_1.VentaModel.deleteOne({ idVenta: nuevaVenta.idVenta });
+                    await persona_model_1.PersonaModel.updateOne({ idPersona: vendedorId }, { $pull: { ventasRealizadas: nuevaVenta.idVenta } });
+                    // Revertir stock de productos
+                    for (const producto of productosProcesados) {
+                        await producto_model_1.ProductoModel.updateOne({ idProducto: producto.idProducto }, { $inc: { cantidad: producto.cantidadVendida } });
+                    }
+                    throw new Error(`Error al crear preferencia de MercadoPago: ${mercadoPagoResponse.error}`);
+                }
+            }
+            const response = {
                 success: true,
                 data: nuevaVenta,
-                mensaje: "Venta registrada correctamente",
+                mensaje: ventaData.IdMetodoPago.toLowerCase() === "efectivo"
+                    ? "Venta registrada correctamente"
+                    : "Venta registrada correctamente. Redirigir al usuario para completar el pago.",
             };
+            // Incluir datos de MercadoPago si están disponibles
+            if (mercadoPagoResponse?.success && mercadoPagoResponse.data) {
+                response.mercadoPagoData = mercadoPagoResponse.data;
+            }
+            return response;
         }
         catch (error) {
             return {
@@ -43,6 +79,9 @@ class VentaService {
             };
         }
     }
+    /**
+     * Procesar productos y actualizar stock
+     */
     static async procesarProductos(productos) {
         if (!productos?.length) {
             throw new Error("Debe incluir al menos un producto");
@@ -76,6 +115,92 @@ class VentaService {
             });
         }
         return resultados;
+    }
+    /**
+     * Obtener venta por ID
+     */
+    static async obtenerVenta(ventaId) {
+        try {
+            const venta = await venta_model_1.VentaModel.findOne({ idVenta: ventaId });
+            if (!venta) {
+                return {
+                    success: false,
+                    error: "Venta no encontrada",
+                };
+            }
+            return {
+                success: true,
+                data: venta,
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Error al obtener venta",
+            };
+        }
+    }
+    /**
+     * Marcar venta como completada (para pagos en efectivo o confirmación manual)
+     */
+    static async completarVenta(ventaId) {
+        try {
+            const venta = await venta_model_1.VentaModel.updateOne({ idVenta: ventaId }, { $set: { estadoPago: "completed" } });
+            if (venta.matchedCount === 0) {
+                return {
+                    success: false,
+                    error: "Venta no encontrada",
+                };
+            }
+            return {
+                success: true,
+                mensaje: "Venta marcada como completada",
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Error al completar venta",
+            };
+        }
+    }
+    /**
+     * Cancelar venta y revertir stock
+     */
+    static async cancelarVenta(ventaId) {
+        try {
+            const venta = await venta_model_1.VentaModel.findOne({ idVenta: ventaId });
+            if (!venta) {
+                return {
+                    success: false,
+                    error: "Venta no encontrada",
+                };
+            }
+            if (venta.estadoPago === "cancelled") {
+                return {
+                    success: false,
+                    error: "No se puede cancelar una venta ya cancelada",
+                };
+            }
+            // Revertir stock
+            for (const producto of venta.productos) {
+                await producto_model_1.ProductoModel.updateOne({ idProducto: producto.idProducto }, { $inc: { cantidad: producto.cantidadVendida } });
+            }
+            // Actualizar estado de la venta
+            await venta_model_1.VentaModel.updateOne({ idVenta: ventaId }, { $set: { estadoPago: "cancelled" } });
+            // Remover de ventas realizadas del vendedor
+            await persona_model_1.PersonaModel.updateOne({ idPersona: venta.vendedor }, { $pull: { ventasRealizadas: ventaId } });
+            return {
+                success: true,
+                mensaje: "Venta cancelada correctamente",
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Error al cancelar venta",
+            };
+        }
     }
     static async obtenerTodasLasVentas() {
         try {

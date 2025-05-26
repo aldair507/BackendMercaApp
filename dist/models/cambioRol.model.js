@@ -33,68 +33,53 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VentaModel = void 0;
+exports.SolicitudCambioRolModel = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const ventaSchema = new mongoose_1.Schema({
-    idVenta: {
+const SolicitudCambioRolSchema = new mongoose_1.Schema({
+    idSolicitud: {
         type: String,
         required: true,
         unique: true,
-        default: () => new mongoose_1.default.Types.ObjectId().toString()
     },
-    fechaVenta: {
+    usuarioSolicitante: {
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        required: true,
+        ref: 'Usuarios'
+    },
+    rolActual: {
+        type: String,
+        required: true,
+        enum: ['usuario', 'vendedor', 'microempresario', 'administrador']
+    },
+    rolSolicitado: {
+        type: String,
+        required: true,
+        enum: ['vendedor', 'microempresario']
+    },
+    motivoSolicitud: {
+        type: String,
+        required: true,
+        maxlength: 500
+    },
+    estadoSolicitud: {
+        type: String,
+        enum: ['pendiente', 'aprobada', 'rechazada'],
+        default: 'pendiente'
+    },
+    fechaSolicitud: {
         type: Date,
         default: Date.now
     },
-    productos: [{
-            idProducto: { type: String, required: true },
-            nombre: { type: String },
-            categoria: { type: String },
-            cantidadVendida: { type: Number, required: true },
-            precioUnitario: { type: Number },
-            descuento: { type: Number, default: 0 },
-            impuestos: { type: Number, default: 0 },
-            subtotal: { type: Number }
-        }],
-    IdMetodoPago: {
-        type: String,
-        required: true
-    },
-    total: {
-        type: Number,
-        required: true
-    },
-    vendedor: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        required: true
-    },
-    // Campos adicionales para MercadoPago
-    paymentId: {
-        type: String,
-        index: true // Permite múltiples documentos con valor null
-    },
-    externalReference: {
-        type: String,
-        sparse: true
-    },
-    estadoPago: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected', 'cancelled'],
-        default: 'pending'
-    },
-    compradorInfo: {
-        email: { type: String },
-        nombre: { type: String },
-        apellido: { type: String },
-        telefono: { type: String },
-        direccion: { type: String }
+    fechaRespuesta: Date,
+    administradorQueResponde: String,
+    comentarioAdmin: String,
+    datosAdicionales: {
+        nit: Number,
+        nombreEmpresa: String,
+        codigoVendedor: String,
+        experienciaVentas: String
     }
 }, {
     timestamps: true
 });
-// Índices para optimizar consultas
-// ventaSchema.index({ vendedor: 1 });
-// ventaSchema.index({ estadoPago: 1 });
-// ventaSchema.index({ paymentId: 1 });
-// ventaSchema.index({ externalReference: 1 });
-exports.VentaModel = mongoose_1.default.model("Venta", ventaSchema);
+exports.SolicitudCambioRolModel = (0, mongoose_1.model)('SolicitudCambioRol', SolicitudCambioRolSchema);

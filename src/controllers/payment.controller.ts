@@ -1,124 +1,246 @@
-import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
-import { ACCESS_TOKEN } from "../config/server.config";
 import { Request, Response } from "express";
-import { PayerRequest } from "mercadopago/dist/clients/payment/create/types";
-import { PreferenceResponse } from "mercadopago/dist/clients/preference/commonTypes";
+import { VentaService } from "../services/venta.service";
+import { MercadoPagoService } from "../services/Pago.service";
 import { PaymentResponse } from "../interfaces/PaymentReponse";
 
-const client = new MercadoPagoConfig({
-  accessToken: ACCESS_TOKEN ?? (() => { throw new Error("ACCESS_TOKEN is undefined"); })(),
-  options: {
-    timeout: 5000,
-  },
-});
-const payment = new Payment(client);
-
-//*Create order - Crear orden de pago
-export const createOrder = async (req: Request, res: Response) => {
+/**
+ * Crear venta (con integración automática de MercadoPago si no es efectivo)
+ */
+export const createSale = async (req: Request, res: Response) => {
   try {
-    const payer: PayerRequest = {
-      email: "comprador.nuevo@mail.com",
-      first_name: "John",
-      last_name: "Doe",
-      phone: {
-        area_code: "1",
-        number: "1234567",
-      },
-      address: {
-        street_name: "Calle 123",
-        street_number: "123",
-        zip_code: "123456",
-        city: "Bogotá",
-      },
-      identification: {
-        type: "DNI",
-        number: "12345678",
-      },
-    };
-    const itemsToSale = [
-      {
-        id: "001",
-        title: "Producto #1",
-        description: "Descripción del producto #1 a pagar",
-        picture_url: "https://www.mercadopago.com/org-img/MP3/home/logomp3.gif",
-        category_id: "1",
-        quantity: 1,
-        unit_price: 10000, //2.29 USD
-      },
-      {
-        id: "002",
-        title: "Producto 2",
-        description: "Descripción del producto 2",
-        picture_url: "https://www.mercadopago.com/org-img/MP3/home/logomp3.gif",
-        category_id: "2",
-        quantity: 2,
-        unit_price: 20000, //4,58 USD
-      },
-    ];
-    let result: PreferenceResponse | undefined;
-    const preference = new Preference(client);
-    await preference
-      .create({
-        body: {
-          items: itemsToSale,
-          payer,
-          redirect_urls: {
-            success: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-            failure: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-            pending: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-          },
-          back_urls: {
-            success: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-            failure: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-            pending: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-          },
-          auto_return: "approved",
-        },
-        requestOptions: {
-          timeout: 5000,
-        },
-      })
-      .then((x) => {
-        console.log(x);
-        result = x;
-      })
-      .catch((err) => {
-        console.log(err);
+    const {
+      vendedorId,
+      productos,
+      compradorInfo,
+      IdMetodoPago = "mercadopago",
+      redirectUrls,
+    } = req.body;
+
+    // Validar datos requeridos
+    if (!vendedorId || !productos) {
+      return res.status(400).json({
+        success: false,
+        message: "Faltan datos requeridos: vendedorId, productos",
       });
-    console.log("Pago creado: ", result);
-    res.status(200).json({ url: result?.sandbox_init_point });
+    }
+
+    // Si no es efectivo, validar datos del comprador
+    if (IdMetodoPago.toLowerCase() !== "efectivo" && !compradorInfo) {
+      return res.status(400).json({
+        success: false,
+        message: "Los datos del comprador son requeridos para pagos electrónicos",
+      });
+    }
+
+    // Registrar venta (incluye integración con MercadoPago si aplica)
+    const resultado = await VentaService.registrarVenta(vendedorId, {
+      productos,
+      IdMetodoPago,
+      compradorInfo,
+      redirectUrls,
+    });
+
+    if (!resultado.success) {
+      return res.status(400).json(resultado);
+    }
+
+    // Respuesta diferente según el método de pago
+    const response: any = {
+      success: true,
+      data: {
+        ventaId: resultado.data.idVenta,
+        total: resultado.data.total,
+        metodoPago: IdMetodoPago,
+        estadoPago: resultado.data.estadoPago,
+      },
+      mensaje: resultado.mensaje,
+    };
+
+    // Si hay datos de MercadoPago, incluirlos en la respuesta
+    if (resultado.mercadoPagoData) {
+      response.data.mercadoPago = resultado.mercadoPagoData;
+    }
+
+    res.status(200).json(response);
+
   } catch (error) {
-    console.log("Error al crear un pago: ", error);
-    res.status(500).json({ message: "Error al crear el pago" });
+    console.error("Error al crear venta:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor",
+      error: error instanceof Error ? error.message : "Error desconocido",
+    });
   }
 };
 
+/**
+ * Manejar pago exitoso (callback de MercadoPago)
+ */
 export const success = async (req: Request, res: Response) => {
   try {
     const data = req.query as unknown as PaymentResponse;
-    console.log("Data del pago recibido:", data);
-    //*Procesar el estado del pago en la base de datos
+    console.log("Pago exitoso recibido:", data);
+
+    const resultado = await MercadoPagoService.procesarPagoExitoso(
+      data.payment_id,
+      data.external_reference ?? ""
+    );
+
     res.status(200).json({
-      message: "Pago realizado de forma exitosa",
+      success: resultado,
+      message: resultado ? "Pago realizado exitosamente" : "Error procesando el pago",
       data,
     });
   } catch (error) {
-    console.log("Error en el pago: ", error);
+    console.error("Error procesando pago exitoso:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error procesando el pago exitoso",
+    });
   }
 };
+
+/**
+ * Manejar pago fallido (callback de MercadoPago)
+ */
 export const failure = async (req: Request, res: Response) => {
   try {
     const data = req.query as unknown as PaymentResponse;
-    console.log("Data del pago recibido:", data);
+    console.log("Pago fallido recibido:", data);
+
+    const resultado = await MercadoPagoService.procesarPagoFallido(
+      data.payment_id,
+      data.external_reference ?? ""
+    );
+
+    res.status(200).json({
+      success: false,
+      message: "Pago rechazado",
+      data,
+    });
   } catch (error) {
-    console.log("Error en el pago: ", error);
+    console.error("Error procesando pago fallido:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error procesando el pago fallido",
+    });
   }
 };
+
+/**
+ * Manejar pago pendiente (callback de MercadoPago)
+ */
 export const pending = async (req: Request, res: Response) => {
   try {
     const data = req.query as unknown as PaymentResponse;
-    console.log("Data del pago recibido:", data);
+    console.log("Pago pendiente recibido:", data);
+
+    const resultado = await MercadoPagoService.procesarPagoPendiente(
+      data.payment_id,
+      data.external_reference ?? ""
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Pago pendiente",
+      data,
+    });
   } catch (error) {
-    console.log("Error en el pago: ", error);
+    console.error("Error procesando pago pendiente:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error procesando el pago pendiente",
+    });
+  }
+};
+
+/**
+ * Webhook para notificaciones de MercadoPago
+ */
+export const webhook = async (req: Request, res: Response) => {
+  try {
+    const { type, data } = req.body;
+
+    const resultado = await MercadoPagoService.procesarWebhook(type, data);
+
+    res.status(200).json({ 
+      received: true,
+      processed: resultado 
+    });
+  } catch (error) {
+    console.error("Error procesando webhook:", error);
+    res.status(500).json({ 
+      error: "Error procesando webhook",
+      received: false 
+    });
+  }
+};
+
+/**
+ * Obtener estado de pago de una venta
+ */
+export const getPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { ventaId } = req.params;
+
+    const resultado = await MercadoPagoService.obtenerEstadoPago(ventaId);
+
+    if (resultado.success) {
+      res.status(200).json(resultado);
+    } else {
+      res.status(404).json(resultado);
+    }
+  } catch (error) {
+    console.error("Error obteniendo estado de pago:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error obteniendo estado de pago",
+    });
+  }
+};
+
+/**
+ * Completar venta manualmente (para efectivo o confirmación manual)
+ */
+export const completeSale = async (req: Request, res: Response) => {
+  try {
+    const { ventaId } = req.params;
+
+    const resultado = await VentaService.completarVenta(ventaId);
+
+    if (resultado.success) {
+      res.status(200).json(resultado);
+    } else {
+      res.status(400).json(resultado);
+    }
+  } catch (error) {
+    console.error("Error completando venta:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error completando venta",
+    });
+  }
+};
+
+/**
+ * Cancelar venta
+ */
+export const cancelSale = async (req: Request, res: Response) => {
+  try {
+    const { ventaId } = req.params;
+
+    const resultado = await VentaService.cancelarVenta(ventaId);
+
+    if (resultado.success) {
+      res.status(200).json(resultado);
+    } else {
+      res.status(400).json(resultado);
+    }
+  } catch (error) {
+    console.error("Error cancelando venta:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error cancelando venta",
+    });
   }
 };

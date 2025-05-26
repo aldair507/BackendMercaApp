@@ -46,7 +46,7 @@ const PersonaSchema = new mongoose_2.Schema({
     nombrePersona: { type: String, required: true },
     apellido: { type: String, required: true },
     edad: { type: Number, required: true },
-    identificacion: { type: Number, required: true },
+    identificacion: { type: String, required: true },
     correo: { type: String, required: true },
     password: { type: String, required: true },
     fechaCreacionPersona: { type: Date, default: Date.now },

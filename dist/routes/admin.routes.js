@@ -8,6 +8,7 @@ const authenticateAdmin_1 = require("../middlewares/authenticateAdmin");
 const persona_controllers_1 = require("../controllers/persona.controllers");
 const venta_controller_1 = require("../controllers/venta.controller");
 const producto_controller_1 = require("../controllers/producto.controller");
+const cambioRol_controllers_1 = require("../controllers/cambioRol.controllers");
 const router = (0, express_1.Router)();
 exports.adminRoutes = router;
 // Usuarios
@@ -23,3 +24,8 @@ router.post("/registrar-producto", authenticateToken_1.authenticateToken, produc
 router.put("/actualizar-producto/:id", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.actualizarProducto);
 router.post("/aumentar-stock", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.aumentarStockController);
 router.get("/listar-productos", authenticateToken_1.authenticateToken, producto_controller_1.ProductoController.listar);
+router.post('/solicitar-cambio-rol', authenticateToken_1.authenticateToken, cambioRol_controllers_1.SolicitudCambioRolController.crearSolicitud);
+router.get('/mis-solicitudes', authenticateToken_1.authenticateToken, cambioRol_controllers_1.SolicitudCambioRolController.obtenerMisSolicitudes);
+// Rutas para administradores
+router.get('/admin/solicitudes-pendientes', authenticateToken_1.authenticateToken, cambioRol_controllers_1.SolicitudCambioRolController.obtenerSolicitudesPendientes);
+router.put('/admin/responder-solicitud/:solicitudId', authenticateToken_1.authenticateToken, cambioRol_controllers_1.SolicitudCambioRolController.responderSolicitud);

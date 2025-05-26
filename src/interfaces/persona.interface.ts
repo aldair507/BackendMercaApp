@@ -6,7 +6,7 @@ export interface IPersona {
   nombrePersona: string;
   apellido: string;
   edad: number;
-  identificacion: number;
+  identificacion: string;
   correo: string;
   password: string;
   fechaCreacionPersona: Date;

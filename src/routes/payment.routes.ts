@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  createOrder,
+  createSale,
   success,
   failure,
   pending,
@@ -8,7 +8,8 @@ import {
 
 const paymentRoutes = Router();
 
-paymentRoutes.post("/create", createOrder);
+paymentRoutes.post("/create",createSale  );
+
 paymentRoutes.get("/success", success);
 paymentRoutes.get("/failure", failure);
 paymentRoutes.get("/pending", pending);

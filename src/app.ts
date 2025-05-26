@@ -13,6 +13,7 @@ import bodyParser from "body-parser";
 import { inicializarMetodosPago } from "./controllers/metodoPago";
 import { metodoPagoRouter } from "./routes/metodoPago.routes";
 import { notificacionRoutes } from "./routes/notificacion.routes";
+import paymentRoutes from "./routes/payment.routes";
 
 const app = express();
 import { ACCESS_TOKEN } from "./config/server.config";
@@ -51,6 +52,7 @@ app.use("/api/venta", ventaRouter);
 app.use("/api/productos", productoRoutes);
 app.use("/api/pagos", metodoPagoRouter);
 app.use("/api/notificaciones", notificacionRoutes);
+app.use("/api/payment", paymentRoutes);
 
 connectDB();
 

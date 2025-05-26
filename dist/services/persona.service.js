@@ -136,7 +136,13 @@ class PersonaService {
                 }
                 return {
                     success: true,
-                    data: resultado,
+                    data: (() => {
+                        if (resultado) {
+                            const { password, ...rest } = resultado;
+                            return rest;
+                        }
+                        return undefined;
+                    })(),
                 };
             }
             else {
@@ -251,7 +257,10 @@ class PersonaService {
             }
             return {
                 success: true,
-                data: usuarioActualizado,
+                data: {
+                    ...usuarioActualizado,
+                    identificacion: Number(usuarioActualizado.identificacion),
+                },
             };
         }
         catch (error) {

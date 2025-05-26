@@ -180,7 +180,13 @@ public static async actualizarDatosUsuario(
 
       return {
         success: true,
-        data: resultado as Omit<IUsuario, "password">,
+        data: (() => {
+          if (resultado) {
+            const { password, ...rest } = resultado as any;
+            return rest as Omit<IUsuario, "password">;
+          }
+          return undefined;
+        })(),
       };
     } else {
       // Caso común sin cambio de rol: validar solo los datos recibidos
@@ -223,7 +229,7 @@ public static async actualizarDatosUsuario(
 
       return {
         success: true,
-        data: updatedUser as Omit<IUsuario, "password">,
+        data: updatedUser as unknown as Omit<IUsuario, "password">,
       };
     }
   } catch (error) {
@@ -345,7 +351,10 @@ public static async actualizarDatosUsuario(
 
       return {
         success: true,
-        data: usuarioActualizado as Omit<IUsuario, "password">,
+        data: {
+          ...(usuarioActualizado as any),
+          identificacion: Number((usuarioActualizado as any).identificacion),
+        } as Omit<IUsuario, "password">,
       };
     } catch (error) {
       console.error(
