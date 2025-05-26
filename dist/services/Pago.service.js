@@ -23,9 +23,9 @@ class MercadoPagoService {
             const { compradorInfo, redirectUrls } = mercadoPagoData;
             // Configurar URLs por defecto si no se proporcionan
             const defaultUrls = {
-                success: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-                failure: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-                pending: "https://prueba-mercapp--7re40lyjvl.expo.app/",
+                success: "https://prueba-mercapp--1.expo.app/",
+                failure: "https://prueba-mercapp--1.expo.app/",
+                pending: "https://prueba-mercapp--1.expo.app/",
             };
             const urls = { ...defaultUrls, ...redirectUrls };
             // Configurar el pagador
@@ -92,7 +92,7 @@ class MercadoPagoService {
             await venta_model_1.VentaModel.updateOne({ idVenta: venta.idVenta }, {
                 $set: {
                     externalReference: result.id,
-                    estadoPago: "pending",
+                    estadoPago: "pendiente",
                     compradorInfo: {
                         email: "mercaap@mail.com",
                         nombre: "cliente",

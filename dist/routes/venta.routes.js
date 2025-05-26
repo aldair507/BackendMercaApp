@@ -8,5 +8,6 @@ const authenticateToken_1 = require("../middlewares/authenticateToken");
 const router = (0, express_1.Router)();
 exports.ventaRouter = router;
 router.post("/registrar-venta", authenticateToken_1.authenticateToken, venta_controller_1.VentaController.registrarVenta);
+router.post("/mercadopago", venta_controller_1.VentaController.recibirNotificacion);
 router.get("/obtener-ventas", authenticateToken_1.authenticateToken, venta_controller_1.VentaController.obtenerTodasLasVentasController);
 router.get("/:idVendedor", authenticateToken_1.authenticateToken, venta_controller_1.VentaController.obtenerVentasPorVendedorController);

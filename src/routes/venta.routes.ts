@@ -10,6 +10,7 @@ router.post(
   authenticateToken,
   VentaController.registrarVenta
 );
+router.post("/mercadopago",VentaController.recibirNotificacion)
 router.get("/obtener-ventas",authenticateToken, VentaController.obtenerTodasLasVentasController);
 router.get("/:idVendedor",authenticateToken, VentaController.obtenerVentasPorVendedorController);
 

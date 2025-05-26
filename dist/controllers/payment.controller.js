@@ -8,7 +8,7 @@ const Pago_service_1 = require("../services/Pago.service");
  */
 const createSale = async (req, res) => {
     try {
-        const { productos, IdMetodoPago = "mercadopago", redirectUrls, } = req.body;
+        const { productos, IdMetodoPago = "mercadopago", redirectUrls } = req.body;
         const vendedorId = req.user?.id;
         // Validar datos requeridos
         if (!vendedorId || !productos) {

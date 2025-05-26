@@ -95,21 +95,21 @@ class UsuarioController {
             if (!resultado.success) {
                 res.status(404).json({
                     success: false,
-                    message: resultado.error || 'No hay usuarios registrados',
+                    message: resultado.error || "No hay usuarios registrados",
                 });
                 return;
             }
             res.status(200).json({
                 success: true,
                 data: resultado.data,
-                message: 'Usuarios obtenidos exitosamente',
+                message: "Usuarios obtenidos exitosamente",
             });
         }
         catch (error) {
             console.error("Error en getUsuarios:", error);
             res.status(500).json({
                 success: false,
-                message: 'Error al obtener usuarios',
+                message: "Error al obtener usuarios",
             });
         }
     }
@@ -133,7 +133,6 @@ UsuarioController.registerUsuario = async (req, res) => {
             success: true,
             message: "Usuario registrado exitosamente",
             data: result.data,
-            requestData: userData,
         });
     }
     catch (error) {

@@ -29,7 +29,7 @@ class VentaService {
                 IdMetodoPago: ventaData.IdMetodoPago,
                 total,
                 vendedor: vendedorId,
-                // Si es efectivo, marcar como completado, si no, como pending
+                // Si es efectivo, marcar como completado, si no, com o pending
                 estadoPago: esEfectivo ? "pagado" : "pendiente",
             });
             await nuevaVenta.save();
@@ -41,14 +41,16 @@ class VentaService {
                 const compradorInfo = {
                     email: "cliente@ejemplo.com",
                     nombre: "Cliente",
-                    apellido: "Genérico",
-                    telefono: "123456789" // opcional si lo necesitas
+                    apellido: "mercaapp",
+                    telefono: "123456789", // opcional si lo necesitas
                 };
                 // Validar que se proporcionen los datos del comprador para MercadoPago
                 if (!compradorInfo) {
                     throw new Error("Los datos del comprador son requeridos para pagos con MercadoPago");
                 }
-                if (!compradorInfo.email || !compradorInfo.nombre || !compradorInfo.apellido) {
+                if (!compradorInfo.email ||
+                    !compradorInfo.nombre ||
+                    !compradorInfo.apellido) {
                     throw new Error("Email, nombre y apellido del comprador son requeridos para MercadoPago");
                 }
                 const mercadoPagoData = {
@@ -184,7 +186,7 @@ class VentaService {
                     error: "Venta no encontrada",
                 };
             }
-            if (venta.estadoPago === "cancelled") {
+            if (venta.estadoPago === "cancelado") {
                 return {
                     success: false,
                     error: "No se puede cancelar una venta ya cancelada",
@@ -214,14 +216,16 @@ class VentaService {
         try {
             const [ventas, productos] = await Promise.all([
                 venta_model_1.VentaModel.find().lean(),
-                producto_model_1.ProductoModel.find().select("idProducto nombre categoria").lean()
+                producto_model_1.ProductoModel.find().select("idProducto nombre categoria").lean(),
             ]);
-            const productosMap = new Map(productos.map(p => [p.idProducto, p]));
+            const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
             const ventasConDatos = await Promise.all(ventas.map(async (venta) => {
-                const vendedor = await persona_model_1.PersonaModel.findOne({ idPersona: venta.vendedor })
+                const vendedor = await persona_model_1.PersonaModel.findOne({
+                    idPersona: venta.vendedor,
+                })
                     .select("idPersona nombrePersona apellido")
                     .lean();
-                const productosConDatos = venta.productos.map(pv => ({
+                const productosConDatos = venta.productos.map((pv) => ({
                     ...pv,
                     producto: productosMap.get(pv.idProducto) || {
                         nombre: "Producto no encontrado",
@@ -230,7 +234,10 @@ class VentaService {
                 }));
                 return {
                     ...venta,
-                    vendedor: vendedor || { nombrePersona: "No disponible", apellido: "" },
+                    vendedor: vendedor || {
+                        nombrePersona: "No disponible",
+                        apellido: "",
+                    },
                     productos: productosConDatos,
                 };
             }));
@@ -250,8 +257,10 @@ class VentaService {
     static async obtenerVentasPorVendedor(idPersona) {
         try {
             const [persona, ventas] = await Promise.all([
-                persona_model_1.PersonaModel.findOne({ idPersona }).select("idPersona nombrePersona apellido").lean(),
-                venta_model_1.VentaModel.find({ vendedor: idPersona }).lean()
+                persona_model_1.PersonaModel.findOne({ idPersona })
+                    .select("idPersona nombrePersona apellido")
+                    .lean(),
+                venta_model_1.VentaModel.find({ vendedor: idPersona }).lean(),
             ]);
             if (!persona) {
                 return { success: false, mensaje: "Vendedor no encontrado" };
@@ -263,15 +272,19 @@ class VentaService {
                     mensaje: "No se encontraron ventas para este vendedor",
                 };
             }
-            const productosIds = [...new Set(ventas.flatMap(v => v.productos.map(p => p.idProducto)))];
-            const productos = await producto_model_1.ProductoModel.find({ idProducto: { $in: productosIds } })
+            const productosIds = [
+                ...new Set(ventas.flatMap((v) => v.productos.map((p) => p.idProducto))),
+            ];
+            const productos = await producto_model_1.ProductoModel.find({
+                idProducto: { $in: productosIds },
+            })
                 .select("idProducto nombre categoria")
                 .lean();
-            const productosMap = new Map(productos.map(p => [p.idProducto, p]));
-            const ventasConDatos = ventas.map(venta => ({
+            const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
+            const ventasConDatos = ventas.map((venta) => ({
                 ...venta,
                 vendedor: persona,
-                productos: venta.productos.map(pv => ({
+                productos: venta.productos.map((pv) => ({
                     ...pv,
                     producto: productosMap.get(pv.idProducto) || {
                         nombre: "Producto no encontrado",
@@ -288,7 +301,9 @@ class VentaService {
         catch (error) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Error al obtener ventas por vendedor",
+                error: error instanceof Error
+                    ? error.message
+                    : "Error al obtener ventas por vendedor",
             };
         }
     }

@@ -62,9 +62,9 @@ export class MercadoPagoService {
 
       // Configurar URLs por defecto si no se proporcionan
       const defaultUrls = {
-        success: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-        failure: "https://prueba-mercapp--7re40lyjvl.expo.app/",
-        pending: "https://prueba-mercapp--7re40lyjvl.expo.app/",
+        success: "https://prueba-mercapp--1.expo.app/",
+        failure: "https://prueba-mercapp--1.expo.app/",
+        pending: "https://prueba-mercapp--1.expo.app/",
       };
 
       const urls = { ...defaultUrls, ...redirectUrls };
@@ -143,7 +143,7 @@ export class MercadoPagoService {
         {
           $set: {
             externalReference: result.id,
-            estadoPago: "pending",
+            estadoPago: "pendiente",
             compradorInfo: {
               email: "mercaap@mail.com",
               nombre: "cliente",
