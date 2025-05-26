@@ -71,23 +71,23 @@ export class MercadoPagoService {
 
       // Configurar el pagador
       const payer: PayerRequest = {
-        email: compradorInfo.email,
-        first_name: compradorInfo.nombre,
-        last_name: compradorInfo.apellido,
-        phone: compradorInfo.telefono
-          ? {
-              area_code: "57", // Colombia por defecto
-              number: compradorInfo.telefono,
-            }
-          : undefined,
-        address: compradorInfo.direccion
-          ? {
-              street_name: compradorInfo.direccion,
-              street_number: "S/N",
-              zip_code: "000000",
-              city: "Bogotá",
-            }
-          : undefined,
+        email: "mercaap@mail.com",
+        first_name: "cliente",
+        last_name: "mercaap",
+        ...(compradorInfo.telefono && {
+          phone: {
+            area_code: "57", // Colombia por defecto
+            number: compradorInfo.telefono,
+          },
+        }),
+        ...(compradorInfo.direccion && {
+          address: {
+            street_name: compradorInfo.direccion,
+            street_number: "S/N",
+            zip_code: "000000",
+            city: "Bogotá",
+          },
+        }),
         identification: {
           type: "CC",
           number: compradorInfo.identificacion || "12345678",
@@ -145,11 +145,11 @@ export class MercadoPagoService {
             externalReference: result.id,
             estadoPago: "pending",
             compradorInfo: {
-              email: compradorInfo.email,
-              nombre: compradorInfo.nombre,
-              apellido: compradorInfo.apellido,
-              telefono: compradorInfo.telefono,
-              direccion: compradorInfo.direccion,
+              email: "mercaap@mail.com",
+              nombre: "cliente",
+              apellido: "mercaap",
+              telefono: "3124569874",
+              direccion: "popayan cauca",
             },
           },
         }

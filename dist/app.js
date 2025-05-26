@@ -50,7 +50,7 @@ app.use("/api/venta", venta_routes_1.ventaRouter);
 app.use("/api/productos", producto_routes_1.productoRoutes);
 app.use("/api/pagos", metodoPago_routes_1.metodoPagoRouter);
 app.use("/api/notificaciones", notificacion_routes_1.notificacionRoutes);
-app.use("/api/payment", payment_routes_1.default);
+app.use("/api/venta", payment_routes_1.default);
 (0, database_1.connectDB)();
 app.listen(PORT || 4000, "0.0.0.0", () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);

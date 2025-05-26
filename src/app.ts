@@ -52,7 +52,7 @@ app.use("/api/venta", ventaRouter);
 app.use("/api/productos", productoRoutes);
 app.use("/api/pagos", metodoPagoRouter);
 app.use("/api/notificaciones", notificacionRoutes);
-app.use("/api/payment", paymentRoutes);
+app.use("/api/venta", paymentRoutes);
 
 connectDB();
 

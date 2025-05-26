@@ -11,7 +11,6 @@ export const createSale = async (req: Request, res: Response) => {
     const {
       vendedorId,
       productos,
-      compradorInfo,
       IdMetodoPago = "mercadopago",
       redirectUrls,
     } = req.body;
@@ -24,13 +23,14 @@ export const createSale = async (req: Request, res: Response) => {
       });
     }
 
-    // Si no es efectivo, validar datos del comprador
-    if (IdMetodoPago.toLowerCase() !== "efectivo" && !compradorInfo) {
-      return res.status(400).json({
-        success: false,
-        message: "Los datos del comprador son requeridos para pagos electrónicos",
-      });
-    }
+    // Datos del comprador quemados (estáticos)
+    const compradorInfo = {
+      email: "mercaap@mail.com",
+      nombre: "cliente",
+      apellido: "mercaap",
+      telefono: "3124569874",
+      direccion: "popayan cauca",
+    };
 
     // Registrar venta (incluye integración con MercadoPago si aplica)
     const resultado = await VentaService.registrarVenta(vendedorId, {
@@ -44,7 +44,7 @@ export const createSale = async (req: Request, res: Response) => {
       return res.status(400).json(resultado);
     }
 
-    // Respuesta diferente según el método de pago
+    // Construir respuesta
     const response: any = {
       success: true,
       data: {
@@ -56,13 +56,12 @@ export const createSale = async (req: Request, res: Response) => {
       mensaje: resultado.mensaje,
     };
 
-    // Si hay datos de MercadoPago, incluirlos en la respuesta
+    // Si hay datos de MercadoPago, incluirlos
     if (resultado.mercadoPagoData) {
       response.data.mercadoPago = resultado.mercadoPagoData;
     }
 
     res.status(200).json(response);
-
   } catch (error) {
     console.error("Error al crear venta:", error);
     res.status(500).json({
@@ -72,6 +71,7 @@ export const createSale = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 /**
  * Manejar pago exitoso (callback de MercadoPago)
@@ -88,7 +88,9 @@ export const success = async (req: Request, res: Response) => {
 
     res.status(200).json({
       success: resultado,
-      message: resultado ? "Pago realizado exitosamente" : "Error procesando el pago",
+      message: resultado
+        ? "Pago realizado exitosamente"
+        : "Error procesando el pago",
       data,
     });
   } catch (error) {
@@ -163,15 +165,15 @@ export const webhook = async (req: Request, res: Response) => {
 
     const resultado = await MercadoPagoService.procesarWebhook(type, data);
 
-    res.status(200).json({ 
+    res.status(200).json({
       received: true,
-      processed: resultado 
+      processed: resultado,
     });
   } catch (error) {
     console.error("Error procesando webhook:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Error procesando webhook",
-      received: false 
+      received: false,
     });
   }
 };

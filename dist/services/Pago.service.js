@@ -30,23 +30,23 @@ class MercadoPagoService {
             const urls = { ...defaultUrls, ...redirectUrls };
             // Configurar el pagador
             const payer = {
-                email: compradorInfo.email,
-                first_name: compradorInfo.nombre,
-                last_name: compradorInfo.apellido,
-                phone: compradorInfo.telefono
-                    ? {
+                email: "mercaap@mail.com",
+                first_name: "cliente",
+                last_name: "mercaap",
+                ...(compradorInfo.telefono && {
+                    phone: {
                         area_code: "57", // Colombia por defecto
                         number: compradorInfo.telefono,
-                    }
-                    : undefined,
-                address: compradorInfo.direccion
-                    ? {
+                    },
+                }),
+                ...(compradorInfo.direccion && {
+                    address: {
                         street_name: compradorInfo.direccion,
                         street_number: "S/N",
                         zip_code: "000000",
                         city: "Bogotá",
-                    }
-                    : undefined,
+                    },
+                }),
                 identification: {
                     type: "CC",
                     number: compradorInfo.identificacion || "12345678",
@@ -94,11 +94,11 @@ class MercadoPagoService {
                     externalReference: result.id,
                     estadoPago: "pending",
                     compradorInfo: {
-                        email: compradorInfo.email,
-                        nombre: compradorInfo.nombre,
-                        apellido: compradorInfo.apellido,
-                        telefono: compradorInfo.telefono,
-                        direccion: compradorInfo.direccion,
+                        email: "mercaap@mail.com",
+                        nombre: "cliente",
+                        apellido: "mercaap",
+                        telefono: "3124569874",
+                        direccion: "popayan cauca",
                     },
                 },
             });
