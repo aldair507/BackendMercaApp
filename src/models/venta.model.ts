@@ -46,8 +46,8 @@ const ventaSchema = new Schema<IVenta>({
   },
   estadoPago: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'cancelled'],
-    default: 'pending'
+    enum: ['pendiente', 'pagado', 'rechazado', 'cancelado'],
+    default: 'pendiente'
   },
   compradorInfo: {
     email: { type: String },

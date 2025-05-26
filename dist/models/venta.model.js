@@ -79,8 +79,8 @@ const ventaSchema = new mongoose_1.Schema({
     },
     estadoPago: {
         type: String,
-        enum: ['pending', 'approved', 'rejected', 'cancelled'],
-        default: 'pending'
+        enum: ['pendiente', 'pagado', 'rechazado', 'cancelado'],
+        default: 'pendiente'
     },
     compradorInfo: {
         email: { type: String },

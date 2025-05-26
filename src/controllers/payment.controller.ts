@@ -6,14 +6,16 @@ import { PaymentResponse } from "../interfaces/PaymentReponse";
 /**
  * Crear venta (con integración automática de MercadoPago si no es efectivo)
  */
-export const createSale = async (req: Request, res: Response) => {
+export const createSale = async ( req: Request & { user?: any }, res: Response) => {
   try {
     const {
-      vendedorId,
+      
       productos,
       IdMetodoPago = "mercadopago",
       redirectUrls,
     } = req.body;
+
+    const vendedorId= req.user?.id;
 
     // Validar datos requeridos
     if (!vendedorId || !productos) {

@@ -2,8 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const payment_controller_1 = require("../controllers/payment.controller");
+const authenticateToken_1 = require("../middlewares/authenticateToken");
 const paymentRoutes = (0, express_1.Router)();
-paymentRoutes.post("/crear-pago", payment_controller_1.createSale);
+paymentRoutes.post("/crear-pago", authenticateToken_1.authenticateToken, payment_controller_1.createSale);
 paymentRoutes.get("/webhook", payment_controller_1.webhook);
 paymentRoutes.get("/success", payment_controller_1.success);
 paymentRoutes.get("/failure", payment_controller_1.failure);

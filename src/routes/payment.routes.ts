@@ -6,10 +6,11 @@ import {
   pending,
   webhook,
 } from "../controllers/payment.controller";
+import { authenticateToken } from "../middlewares/authenticateToken";
 
 const paymentRoutes = Router();
 
-paymentRoutes.post("/crear-pago",createSale  );
+paymentRoutes.post("/crear-pago",authenticateToken,createSale  );
 
 paymentRoutes.get("/webhook", webhook)
 
