@@ -60,7 +60,7 @@ export class VentaController {
       if (resultadoVenta.success && resultadoVenta.data?.idVenta) {
         try {
           const tipoComprobante = "factura";
-          const ventaId = resultadoVenta.data.idVenta;
+          const ventaId = resultadoVenta.data.idVenta.trim();
           console.log("ventaId recibido:", ventaId); // <-- Imprime esto antes del findOne
 
           // Usar async/await en lugar de promesas
@@ -112,6 +112,51 @@ export class VentaController {
       });
     }
   }
+
+
+// Controlador con mejor manejo de errores
+// Controlador corregido
+static async obtenerVenta(req: Request, res: Response) {
+  try {
+    // ✅ Cambiar de req.params.idVenta a req.params.id
+    const ventaId = req.params.id;
+    console.log('🎯 Controlador - ID recibido:', ventaId);
+
+    if (!ventaId) {
+      return res.status(400).json({
+        success: false,
+        error: "Debe proporcionar un ID de venta",
+      });
+    }
+
+    const resultado = await VentaService.obtenerVenta(ventaId);
+    console.log('📤 Controlador - Resultado del servicio:', {
+      success: resultado.success,
+      hasData: !!resultado.data,
+      error: resultado.error
+    });
+
+    if (!resultado.success) {
+      return res.status(404).json({
+        success: false,
+        error: resultado.error || "Venta no encontrada",
+        debug: resultado.debug
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: resultado.data,
+    });
+  } catch (error) {
+    console.error('❌ Error en controlador obtenerVenta:', error);
+    res.status(500).json({
+      success: false,
+      error: "Error interno del servidor"
+    });
+  }
+}
+
   static async obtenerTodasLasVentasController(
     req: Request,
     res: Response

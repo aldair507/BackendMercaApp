@@ -34,7 +34,7 @@ class VentaService {
             });
             await nuevaVenta.save();
             // 5. Actualizar vendedor
-            await persona_model_1.PersonaModel.updateOne({ idPersona: vendedorId }, { $push: { ventasRealizadas: nuevaVenta.idVenta } });
+            await persona_model_1.PersonaModel.updateOne({ idPersona: vendedorId }, { $push: { ventasRealizadas: nuevaVenta.idVenta.trim() } });
             // 6. Si NO es efectivo, crear preferencia de MercadoPago
             let mercadoPagoResponse = null;
             if (!esEfectivo) {
@@ -131,11 +131,20 @@ class VentaService {
      */
     static async obtenerVenta(ventaId) {
         try {
-            const venta = await venta_model_1.VentaModel.findOne({ idVenta: ventaId });
+            // Limpiar espacios en blanco que puedan estar presentes
+            const cleanVentaId = ventaId.trim();
+            const venta = await venta_model_1.VentaModel.findOne({ idVenta: cleanVentaId });
             if (!venta) {
+                // Verificar que exista alguna venta con un ID similar
+                const ventasExistentes = await venta_model_1.VentaModel.find({}, { idVenta: 1 }).limit(5);
+                console.log('📋 Primeras 5 ventas existentes:', ventasExistentes.map(v => v.idVenta));
                 return {
                     success: false,
                     error: "Venta no encontrada",
+                    debug: {
+                        buscado: cleanVentaId,
+                        existentes: ventasExistentes.map(v => v.idVenta)
+                    }
                 };
             }
             return {
@@ -144,6 +153,7 @@ class VentaService {
             };
         }
         catch (error) {
+            console.error('❌ Error en obtenerVenta:', error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Error al obtener venta",

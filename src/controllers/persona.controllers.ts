@@ -37,49 +37,72 @@ export class UsuarioController {
     }
   };
 
-  public static async actualizarUsuario(
-    req: Request & { user?: any },
-    res: Response
-  ): Promise<void> {
-    try {
-      const id = req.params.id;
-      console.log(id);
-      const datos = { ...req.body };
-      const usuarioAuth = req.user;
+public static async actualizarUsuario(
+  req: Request & { user?: any },
+  res: Response
+): Promise<void> {
+  try {
+    const id = req.params.id;
+    const datos = { ...req.body };
+    const usuarioAuth = req.user;
 
-      if ("password" in datos) {
-        delete datos.password;
-      }
-
-      const permitirCambioDeRol = usuarioAuth?.rol === "administrador";
-
-      const resultado = await PersonaService.actualizarDatosUsuario(
-        id,
-        datos,
-        permitirCambioDeRol
-      );
-
-      if (!resultado.success) {
-        res.status(resultado.code || 400).json({
-          success: false,
-          message: resultado.error,
-        });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Usuario actualizado exitosamente",
-        data: resultado.data,
-      });
-    } catch (error) {
-      console.error("Error en actualizarUsuario:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error interno del servidor",
-      });
+    // Eliminar password del objeto datos si viene incluido
+    if ("password" in datos) {
+      delete datos.password;
     }
+
+    // Solo el administrador puede cambiar roles
+    const permitirCambioDeRol = usuarioAuth?.rol === "administrador";
+    
+    // Si no es administrador y está intentando cambiar el rol, eliminarlo de los datos
+    if (!permitirCambioDeRol && "rol" in datos) {
+      delete datos.rol;
+    }
+
+    // Si es administrador y está cambiando el rol, agregar datos específicos del rol
+    if (permitirCambioDeRol && "rol" in datos) {
+      const nuevoRol = datos.rol;
+
+      if (nuevoRol === "vendedor") {
+        // Generar código de vendedor aleatorio (6 dígitos)
+        datos.codigoVendedor = Math.floor(100000 + Math.random() * 900000).toString();
+        datos.ventasRealizadas = 0; // Inicializar en 0
+      } else if (nuevoRol === "microempresario") {
+        // Datos quemados para microempresario
+        datos.nombreEmpresa = "Empresa Demo S.A.S";
+        // Generar NIT aleatorio (9 dígitos)
+        datos.nit = Math.floor(100000000 + Math.random() * 900000000).toString();
+      }
+    }
+
+    const resultado = await PersonaService.actualizarDatosUsuario(
+      id,
+      datos,
+      permitirCambioDeRol
+    );
+
+    if (!resultado.success) {
+      res.status(resultado.code || 400).json({
+        success: false,
+        message: resultado.error,
+        validationErrors: resultado.validationErrors,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Usuario actualizado exitosamente",
+      data: resultado.data,
+    });
+  } catch (error) {
+    console.error("Error en actualizarUsuario:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor",
+    });
   }
+}
 
   public static async cambiarContrasena(
     req: Request,

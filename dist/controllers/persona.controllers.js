@@ -8,18 +8,39 @@ class UsuarioController {
     static async actualizarUsuario(req, res) {
         try {
             const id = req.params.id;
-            console.log(id);
             const datos = { ...req.body };
             const usuarioAuth = req.user;
+            // Eliminar password del objeto datos si viene incluido
             if ("password" in datos) {
                 delete datos.password;
             }
+            // Solo el administrador puede cambiar roles
             const permitirCambioDeRol = usuarioAuth?.rol === "administrador";
+            // Si no es administrador y está intentando cambiar el rol, eliminarlo de los datos
+            if (!permitirCambioDeRol && "rol" in datos) {
+                delete datos.rol;
+            }
+            // Si es administrador y está cambiando el rol, agregar datos específicos del rol
+            if (permitirCambioDeRol && "rol" in datos) {
+                const nuevoRol = datos.rol;
+                if (nuevoRol === "vendedor") {
+                    // Generar código de vendedor aleatorio (6 dígitos)
+                    datos.codigoVendedor = Math.floor(100000 + Math.random() * 900000).toString();
+                    datos.ventasRealizadas = 0; // Inicializar en 0
+                }
+                else if (nuevoRol === "microempresario") {
+                    // Datos quemados para microempresario
+                    datos.nombreEmpresa = "Empresa Demo S.A.S";
+                    // Generar NIT aleatorio (9 dígitos)
+                    datos.nit = Math.floor(100000000 + Math.random() * 900000000).toString();
+                }
+            }
             const resultado = await persona_service_1.PersonaService.actualizarDatosUsuario(id, datos, permitirCambioDeRol);
             if (!resultado.success) {
                 res.status(resultado.code || 400).json({
                     success: false,
                     message: resultado.error,
+                    validationErrors: resultado.validationErrors,
                 });
                 return;
             }

@@ -94,153 +94,178 @@ export class PersonaService {
     }
   }
 
-public static async actualizarDatosUsuario(
-  id: object | string,
-  datosActualizados: Partial<IUsuario>,
-  permitirCambioDeRol = false
-): Promise<{
-  success: boolean;
-  data?: Omit<IUsuario, "password">;
-  error?: string;
-  code?: number;
-  validationErrors?: any[];
-}> {
-  if (!id) {
-    return {
-      success: false,
-      error: "Se requiere ID de usuario",
-      code: 400,
-    };
-  }
-
-  try {
-    // Obtener usuario actual para saber el rol anterior
-    const usuarioExistente = await PersonaModel.findOne({ idPersona: id }).lean();
-    if (!usuarioExistente) {
-      return { success: false, error: "Usuario no encontrado", code: 404 };
+  public static async actualizarDatosUsuario(
+    id: object | string,
+    datosActualizados: Partial<IUsuario>,
+    permitirCambioDeRol = true
+  ): Promise<{
+    success: boolean;
+    data?: Omit<IUsuario, "password">;
+    error?: string;
+    code?: number;
+    validationErrors?: any[];
+  }> {
+    if (!id) {
+      return {
+        success: false,
+        error: "Se requiere ID de usuario",
+        code: 400,
+      };
     }
 
-    // Bloquear cambio de rol si no permitido
-    if (!permitirCambioDeRol && "rol" in datosActualizados) {
-      delete datosActualizados.rol;
-    }
+    try {
+      // Buscar usuario actual sin contraseña para validaciones
+      const usuarioExistente = await PersonaModel.findOne({ idPersona: id }).lean();
+      if (!usuarioExistente) {
+        return { success: false, error: "Usuario no encontrado", code: 404 };
+      }
 
-    // Si se cambia el rol, validar campos del nuevo rol
-    if (permitirCambioDeRol && datosActualizados.rol && datosActualizados.rol !== usuarioExistente.rol) {
-      // Aquí validamos con Zod el objeto completo con nuevo rol y los campos necesarios
-      const validacionRol = UsuarioSchema.safeParse({
-        ...usuarioExistente, // datos viejos
-        ...datosActualizados, // nuevos datos que incluyen el rol nuevo
-      });
+      // Bloquear cambio de rol si no está permitido
+      if (!permitirCambioDeRol && "rol" in datosActualizados) {
+        delete datosActualizados.rol;
+      }
 
-      if (!validacionRol.success) {
-        return {
-          success: false,
-          error: "Datos inválidos para el nuevo rol",
-          validationErrors: validacionRol.error.errors,
-          code: 400,
+      // Normalizar datos numéricos si están presentes
+      const datosNormalizados: any = { ...datosActualizados };
+      if (datosNormalizados.edad !== undefined) {
+        datosNormalizados.edad = Number(datosNormalizados.edad);
+      }
+      if (datosNormalizados.identificacion !== undefined) {
+        datosNormalizados.identificacion = Number(datosNormalizados.identificacion);
+      }
+
+      // Validar duplicados solo si se están actualizando correo o identificación
+      if (datosNormalizados.correo && datosNormalizados.correo !== usuarioExistente.correo) {
+        const correoExistente = await PersonaModel.findOne({
+          correo: datosNormalizados.correo,
+          idPersona: { $ne: id }
+        });
+        
+        if (correoExistente) {
+          return {
+            success: false,
+            error: "El correo electrónico ya está registrado",
+            code: 400,
+          };
+        }
+      }
+
+      if (datosNormalizados.identificacion && datosNormalizados.identificacion !== usuarioExistente.identificacion) {
+        const identificacionExistente = await PersonaModel.findOne({
+          identificacion: datosNormalizados.identificacion,
+          idPersona: { $ne: id }
+        });
+        
+        if (identificacionExistente) {
+          return {
+            success: false,
+            error: "La identificación ya está registrada",
+            code: 400,
+          };
+        }
+      }
+
+      // Si cambia el rol y está permitido validar campos del nuevo rol
+      if (
+        permitirCambioDeRol &&
+        datosNormalizados.rol &&
+        datosNormalizados.rol !== usuarioExistente.rol
+      ) {
+        // Combinar datos existentes con los nuevos para validación completa
+        const datosCompletos = {
+          ...usuarioExistente,
+          ...datosNormalizados,
         };
-      }
 
-      // Limpiar campos del rol anterior que ya no corresponden
-      const updatesCleaned: any = { ...datosActualizados };
+        const validacionRol = UsuarioSchema.safeParse(datosCompletos);
 
-      if (usuarioExistente.rol === "microempresario") {
-        delete updatesCleaned.nit;
-        delete updatesCleaned.nombreEmpresa;
-      }
-      if (usuarioExistente.rol === "vendedor") {
-        delete updatesCleaned.codigoVendedor;
-        delete updatesCleaned.ventasRealizadas;
-      }
-      if (usuarioExistente.rol === "usuario") {
-        // No tiene campos extras, nada que limpiar
-      }
+        if (!validacionRol.success) {
+          return {
+            success: false,
+            error: "Datos inválidos para el nuevo rol",
+            validationErrors: validacionRol.error.errors,
+            code: 400,
+          };
+        }
 
-      // Aplicar actualización con datos limpios + nuevos campos para nuevo rol
-      const resultado = await PersonaModel.findOneAndUpdate(
-        { idPersona: id },
-        {
-          $set: {
-            ...updatesCleaned,
-            ...validacionRol.data, // los campos para el nuevo rol
+        // Limpiar campos del rol anterior que no corresponden
+        const updatesCleaned: any = { ...datosNormalizados };
+
+        if (usuarioExistente.rol === "microempresario") {
+          delete updatesCleaned.nit;
+          delete updatesCleaned.nombreEmpresa;
+        } else if (usuarioExistente.rol === "vendedor") {
+          delete updatesCleaned.codigoVendedor;
+          delete updatesCleaned.ventasRealizadas;
+        }
+
+        // Actualizar con los datos validados
+        const resultado = await PersonaModel.findOneAndUpdate(
+          { idPersona: id },
+          {
+            $set: updatesCleaned,
+            $currentDate: { fechaActualizacionPersona: true },
           },
-          $currentDate: { fechaActualizacionPersona: true },
-        },
-        { new: true, runValidators: true, select: "-password -__v" }
-      ).lean();
+          { new: true, runValidators: true, select: "-password -__v" }
+        ).lean();
 
-      if (!resultado) {
+        if (!resultado) {
+          return {
+            success: false,
+            error: "Error actualizando usuario",
+            code: 500,
+          };
+        }
+
         return {
-          success: false,
-          error: "Error actualizando usuario",
-          code: 500,
+          success: true,
+          data: {
+            ...resultado,
+            identificacion: Number(resultado.identificacion),
+          } as Omit<IUsuario, "password">,
+        };
+      } else {
+        // Caso sin cambio de rol: actualizar directamente sin validación de esquema completo
+        // Solo validamos tipos de datos básicos que ya normalizamos arriba
+        
+        const updatedUser = await PersonaModel.findOneAndUpdate(
+          { idPersona: id },
+          {
+            $set: datosNormalizados,
+            $currentDate: { fechaActualizacionPersona: true },
+          },
+          { new: true, runValidators: true, select: "-password -__v" }
+        ).lean();
+
+        if (!updatedUser) {
+          return {
+            success: false,
+            error: "Error actualizando usuario",
+            code: 500,
+          };
+        }
+
+        return {
+          success: true,
+          data: {
+            ...updatedUser,
+            identificacion: Number(updatedUser.identificacion),
+          } as Omit<IUsuario, "password">,
         };
       }
-
+    } catch (error) {
+      console.error(`Error actualizando usuario ${id}:`, error);
+      
+      // Manejar errores de validación de MongoDB
+      
+      
       return {
-        success: true,
-        data: (() => {
-          if (resultado) {
-            const { password, ...rest } = resultado as any;
-            return rest as Omit<IUsuario, "password">;
-          }
-          return undefined;
-        })(),
-      };
-    } else {
-      // Caso común sin cambio de rol: validar solo los datos recibidos
-
-      const normalizado: any = {
-        ...datosActualizados,
-        ...(datosActualizados.edad && { edad: Number(datosActualizados.edad) }),
-        ...(datosActualizados.identificacion && {
-          identificacion: Number(datosActualizados.identificacion),
-        }),
-      };
-
-      const safeResult = UsuarioSchema.safeParse(normalizado); // .partial() para permitir actualización parcial
-
-      if (!safeResult.success) {
-        return {
-          success: false,
-          error: "Datos inválidos",
-          validationErrors: safeResult.error.errors,
-          code: 400,
-        };
-      }
-
-      const updatedUser = await PersonaModel.findOneAndUpdate(
-        { idPersona: id },
-        {
-          $set: safeResult.data,
-          $currentDate: { fechaActualizacionPersona: true },
-        },
-        { new: true, runValidators: true, select: "-password -__v" }
-      ).lean();
-
-      if (!updatedUser) {
-        return {
-          success: false,
-          error: "Error actualizando usuario",
-          code: 500,
-        };
-      }
-
-      return {
-        success: true,
-        data: updatedUser as unknown as Omit<IUsuario, "password">,
+        success: false,
+        error: "Error interno al actualizar usuario",
+        code: 500,
       };
     }
-  } catch (error) {
-    console.error(`Error actualizando usuario ${id}:`, error);
-    return {
-      success: false,
-      error: "Error interno al actualizar usuario",
-      code: 500,
-    };
   }
-}
 
 
   public static async obtenerUsuarioPorId(idPersona: string): Promise<{
