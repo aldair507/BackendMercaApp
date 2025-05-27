@@ -13,10 +13,17 @@ const path_1 = __importDefault(require("path"));
 class ComprobanteService {
     static async generarComprobante(ventaId, tipo = "ticket", options) {
         try {
-            // 1. Obtener la venta con vendedor directamente (populate manual)
-            const venta = await venta_model_1.VentaModel.findById(ventaId).lean();
-            if (!venta)
-                throw new Error("Venta no encontrada");
+            console.log("🎯 Generando comprobante para ventaId:", ventaId);
+            // ✅ CORRECCIÓN: Usar findOne con idVenta en lugar de findById
+            const venta = await venta_model_1.VentaModel.findOne({ idVenta: ventaId.trim() }).lean();
+            if (!venta) {
+                console.error("❌ Venta no encontrada con ID:", ventaId);
+                // Debug: mostrar algunas ventas existentes
+                const ventasExistentes = await venta_model_1.VentaModel.find({}, { idVenta: 1 }).limit(3).lean();
+                console.log("📋 Ventas existentes:", ventasExistentes.map(v => v.idVenta));
+                throw new Error(`Venta no encontrada con ID: ${ventaId}`);
+            }
+            console.log("✅ Venta encontrada:", venta.idVenta);
             // 2. Obtener vendedor directamente por su id
             const vendedor = await persona_model_1.PersonaModel.findOne({
                 idPersona: venta.vendedor,
@@ -27,6 +34,7 @@ class ComprobanteService {
                 nombrePersona: "No disponible",
                 apellido: "",
             };
+            console.log("✅ Vendedor encontrado:", vendedorInfo);
             // 3. Obtener productos únicos de la venta
             const productosIds = [
                 ...new Set(venta.productos.map((p) => p.idProducto)),
@@ -38,7 +46,9 @@ class ComprobanteService {
                 .select("idProducto nombre categoria")
                 .lean();
             const productosMap = new Map(productos.map((p) => [p.idProducto, p]));
+            console.log("✅ Productos encontrados:", productos.length);
             // 5. Enriquecer productos en la venta con los datos del producto
+            console.log("🔍 Productos antes de enriquecer:", venta.productos);
             venta.productos = venta.productos.map((productoVenta) => {
                 const producto = productosMap.get(productoVenta.idProducto) || {
                     nombre: "Producto no encontrado",
@@ -50,11 +60,13 @@ class ComprobanteService {
                     categoria: producto.categoria,
                 };
             });
+            console.log("🔍 Productos después de enriquecer:", venta.productos);
             // 6. Crear la venta enriquecida con vendedor
             const ventaEnriquecida = {
                 ...venta,
                 vendedorInfo: vendedorInfo,
             };
+            console.log("🔍 Iniciando creación de PDF...");
             // 7. Crear documento PDF
             const doc = new pdfkit_1.default({
                 size: tipo === "ticket" ? "A5" : "A4",
@@ -70,16 +82,49 @@ class ComprobanteService {
             // Crear el directorio si no existe
             if (!fs_1.default.existsSync(path_1.default.dirname(filePath))) {
                 fs_1.default.mkdirSync(path_1.default.dirname(filePath), { recursive: true });
+                console.log("✅ Directorio creado:", path_1.default.dirname(filePath));
             }
-            doc.pipe(fs_1.default.createWriteStream(filePath));
-            if (tipo === "factura") {
-                this.generarFacturaEstilizada(doc, ventaEnriquecida);
+            console.log("🔍 Configurando stream del PDF...");
+            const stream = fs_1.default.createWriteStream(filePath);
+            doc.pipe(stream);
+            console.log("🔍 Generando contenido del PDF...");
+            try {
+                if (tipo === "factura") {
+                    this.generarFacturaEstilizada(doc, ventaEnriquecida);
+                }
+                else {
+                    this.generarTicketEstilizado(doc, ventaEnriquecida);
+                }
+                console.log("✅ Contenido del PDF generado");
             }
-            else {
-                this.generarTicketEstilizado(doc, ventaEnriquecida);
+            catch (pdfError) {
+                console.error("❌ Error al generar contenido del PDF:", pdfError);
+                throw pdfError;
             }
+            console.log("🔍 Finalizando documento PDF...");
             doc.end();
-            await new Promise((resolve) => doc.on("finish", resolve));
+            // Promesa con timeout para evitar colgarse
+            const pdfPromise = new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Timeout: La generación del PDF tomó demasiado tiempo'));
+                }, 30000); // 30 segundos timeout
+                stream.on("finish", () => {
+                    clearTimeout(timeout);
+                    console.log("✅ PDF generado exitosamente:", filePath);
+                    resolve();
+                });
+                stream.on("error", (error) => {
+                    clearTimeout(timeout);
+                    console.error("❌ Error en el stream:", error);
+                    reject(error);
+                });
+                doc.on("error", (error) => {
+                    clearTimeout(timeout);
+                    console.error("❌ Error al generar PDF:", error);
+                    reject(error);
+                });
+            });
+            await pdfPromise;
             return {
                 success: true,
                 data: {
@@ -92,6 +137,7 @@ class ComprobanteService {
             };
         }
         catch (error) {
+            console.error("❌ Error completo en generarComprobante:", error);
             return {
                 success: false,
                 error: error instanceof Error
@@ -100,344 +146,199 @@ class ComprobanteService {
             };
         }
     }
+    // ✅ Método mejorado para generar factura con diseño profesional - CORREGIDO
     static generarFacturaEstilizada(doc, venta) {
-        // ENCABEZADO PRINCIPAL CON DISEÑO PROFESIONAL
-        // Fondo azul para el encabezado
-        doc
-            .rect(0, 0, doc.page.width, 120)
-            .fillColor('#2c3e50')
-            .fill();
-        // Logo y nombre de la empresa (lado izquierdo)
-        doc
-            .fillColor('#ffffff')
-            .fontSize(28)
-            .font("Helvetica-Bold")
-            .text("MERCAAPP", 50, 30);
-        doc
-            .fontSize(12)
-            .font("Helvetica")
-            .text("Sistema de Gestión Comercial", 50, 65)
-            .text("Popayán, Cauca - Colombia", 50, 80)
-            .text("Email: mercaapp@gmail.com", 50, 95);
-        // FACTURA (lado derecho)
-        doc
-            .fontSize(32)
-            .font("Helvetica-Bold")
-            .fillColor('#ffffff')
-            .text("FACTURA", 350, 40, { align: "right" });
-        // Resetear color para el resto del documento
-        doc.fillColor('#000000');
-        // INFORMACIÓN DEL VENDEDOR Y FACTURA
-        let currentY = 150;
-        // Caja de información del vendedor
-        doc
-            .rect(50, currentY, 240, 80)
-            .strokeColor('#e0e0e0')
-            .lineWidth(1)
-            .stroke();
-        doc
-            .fontSize(12)
-            .font("Helvetica-Bold")
-            .fillColor('#2c3e50')
-            .text("VENDEDOR", 60, currentY + 10);
-        doc
-            .fontSize(11)
-            .font("Helvetica")
-            .fillColor('#000000')
-            .text(`${venta.vendedorInfo.nombrePersona} ${venta.vendedorInfo.apellido}`, 60, currentY + 30)
-            .text("Popayán, Cauca", 60, currentY + 45)
-            .text("Colombia", 60, currentY + 60);
-        // Caja de información de la factura
-        doc
-            .rect(310, currentY, 240, 80)
-            .strokeColor('#e0e0e0')
-            .lineWidth(1)
-            .stroke();
-        doc
-            .fontSize(11)
-            .font("Helvetica-Bold")
-            .fillColor('#2c3e50')
-            .text("NÚMERO DE FACTURA", 320, currentY + 10)
-            .fillColor('#000000')
-            .font("Helvetica")
-            .text(`${venta.idVenta}`, 320, currentY + 25);
-        doc
-            .font("Helvetica-Bold")
-            .fillColor('#2c3e50')
-            .text("FECHA DE EMISIÓN", 320, currentY + 40)
-            .fillColor('#000000')
-            .font("Helvetica")
-            .text(new Date(venta.fechaVenta).toLocaleString("es-CO"), 320, currentY + 55);
-        // MÉTODO DE PAGO
-        currentY = 250;
-        doc
-            .fontSize(12)
-            .font("Helvetica-Bold")
-            .fillColor('#2c3e50')
-            .text("MÉTODO DE PAGO", 50, currentY);
-        const metodoPago = venta.metodoPago || "Efectivo";
-        doc
-            .fontSize(11)
-            .font("Helvetica")
-            .fillColor('#000000')
-            .text(metodoPago, 50, currentY + 20);
-        // TABLA DE PRODUCTOS CON DISEÑO MEJORADO
-        currentY = 300;
-        // Encabezado de la tabla con fondo
-        doc
-            .rect(50, currentY, 500, 25)
-            .fillColor('#f8f9fa')
-            .fill()
-            .strokeColor('#e0e0e0')
-            .lineWidth(1)
-            .stroke();
-        doc
-            .fontSize(10)
-            .font("Helvetica-Bold")
-            .fillColor('#2c3e50')
-            .text("DESCRIPCIÓN", 60, currentY + 8)
-            .text("CANT.", 320, currentY + 8, { width: 40, align: "center" })
-            .text("PRECIO UNIT.", 370, currentY + 8, { width: 70, align: "right" })
-            .text("SUBTOTAL", 450, currentY + 8, { width: 90, align: "right" });
-        // Productos
-        currentY += 25;
-        doc.fillColor('#000000').font("Helvetica");
-        venta.productos.forEach((producto, index) => {
-            // Alternar color de fondo para mejor legibilidad
-            if (index % 2 === 0) {
-                doc
-                    .rect(50, currentY, 500, 25)
-                    .fillColor('#fafafa')
-                    .fill();
-            }
-            doc
-                .rect(50, currentY, 500, 25)
-                .strokeColor('#e0e0e0')
-                .lineWidth(0.5)
-                .stroke();
-            doc
-                .fillColor('#000000')
-                .fontSize(9)
-                .text(producto.nombre, 60, currentY + 7, { width: 250 })
-                .text(`${producto.cantidadVendida}`, 320, currentY + 7, {
-                width: 40,
-                align: "center",
-            })
-                .text(`$${producto.precioUnitario.toLocaleString('es-CO')}`, 370, currentY + 7, {
-                width: 70,
-                align: "right",
-            })
-                .text(`$${producto.subtotal.toLocaleString('es-CO')}`, 450, currentY + 7, {
-                width: 90,
-                align: "right",
+        const fecha = new Date(venta.fechaVenta).toLocaleDateString('es-CO', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        const hora = new Date(venta.fechaVenta).toLocaleTimeString('es-CO', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        // 🎨 HEADER MODERNO CON GRADIENTE VISUAL
+        // Fondo del header (simulando gradiente con rectángulos)
+        doc.rect(0, 0, 612, 120).fill('#2c3e50');
+        doc.rect(0, 120, 612, 20).fill('#34495e');
+        // Logo y título de la empresa
+        doc.fontSize(28).font('Helvetica-Bold').fillColor('white');
+        doc.text('MERCAAPP', 50, 30);
+        doc.fontSize(14).font('Helvetica').fillColor('#ecf0f1');
+        doc.text('Sistema de Gestión Comercial', 50, 65);
+        doc.text('Popayán, Cauca - Colombia', 50, 82);
+        doc.text('Email: mercaapp@gmail.com | Tel: (310) 456-7890', 50, 99);
+        // Información de la factura (lado derecho del header)
+        doc.fontSize(20).font('Helvetica-Bold').fillColor('white');
+        doc.text('FACTURA', 450, 30);
+        doc.fontSize(11).font('Helvetica').fillColor('#bdc3c7');
+        doc.text(`N°: ${venta.idVenta || 'N/A'}`, 450, 60);
+        doc.text(`Fecha: ${fecha}`, 450, 75);
+        doc.text(`Hora: ${hora}`, 450, 90);
+        // Reset color para el resto del documento
+        doc.fillColor('black');
+        // 📋 INFORMACIÓN DEL VENDEDOR (Sección elegante)
+        let yPos = 160;
+        // Caja para vendedor
+        doc.rect(50, yPos, 250, 60).fillAndStroke('#f8f9fa', '#dee2e6');
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('#2c3e50');
+        doc.text('VENDEDOR', 60, yPos + 10);
+        doc.fontSize(11).font('Helvetica').fillColor('#495057');
+        const nombreCompleto = `${venta.vendedorInfo?.nombrePersona || 'N/A'} ${venta.vendedorInfo?.apellido || ''}`.trim();
+        doc.text(nombreCompleto, 60, yPos + 28);
+        doc.text('Popayán, Cauca', 60, yPos + 42);
+        // 📋 INFORMACIÓN DEL CLIENTE (si existiera)
+        doc.rect(320, yPos, 240, 60).fillAndStroke('#e8f5e8', '#28a745');
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('#155724');
+        doc.text('MÉTODO DE PAGO', 330, yPos + 10);
+        doc.fontSize(11).font('Helvetica').fillColor('#495057');
+        doc.text('Efectivo', 330, yPos + 28);
+        // 📊 TABLA DE PRODUCTOS (Diseño moderno)
+        yPos = 250;
+        // Header de la tabla con fondo
+        doc.rect(50, yPos, 510, 30).fill('#6c757d');
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('white');
+        doc.text('DESCRIPCIÓN', 60, yPos + 10);
+        doc.text('CATEGORÍA', 220, yPos + 10);
+        doc.text('CANT.', 320, yPos + 10);
+        doc.text('PRECIO UNIT.', 370, yPos + 10);
+        doc.text('SUBTOTAL', 480, yPos + 10);
+        yPos += 30;
+        let isEvenRow = false;
+        // Reset color para contenido
+        doc.fillColor('black');
+        // 🔧 CORRECCIÓN: Usar los campos correctos de los productos
+        if (venta.productos && Array.isArray(venta.productos)) {
+            venta.productos.forEach((producto, index) => {
+                // ✅ CORRECCIÓN: Usar cantidadVendida en lugar de cantidad
+                const cantidad = producto.cantidadVendida || 0;
+                const precioUnitario = producto.precioUnitario || 0;
+                // ✅ CORRECCIÓN: Usar el subtotal ya calculado o calcularlo correctamente
+                const subtotal = producto.subtotal || (cantidad * precioUnitario);
+                // Fondo alternado para las filas
+                if (isEvenRow) {
+                    doc.rect(50, yPos, 510, 25).fill('#f8f9fa');
+                }
+                doc.fontSize(10).font('Helvetica').fillColor('#495057');
+                doc.text(producto.nombre || 'Producto', 60, yPos + 8, { width: 150 });
+                doc.text(producto.categoria || 'Sin categoría', 220, yPos + 8, { width: 90 });
+                doc.text(cantidad.toString(), 330, yPos + 8);
+                doc.text(`$${precioUnitario.toLocaleString('es-CO')}`, 370, yPos + 8);
+                doc.text(`$${subtotal.toLocaleString('es-CO')}`, 480, yPos + 8);
+                yPos += 25;
+                isEvenRow = !isEvenRow;
             });
-            currentY += 25;
-        });
-        // SECCIÓN DE TOTALES MEJORADA
-        currentY += 20;
-        // Caja de totales
-        doc
-            .rect(350, currentY, 200, 100)
-            .strokeColor('#2c3e50')
-            .lineWidth(2)
-            .stroke();
-        // Subtotal
-        const subtotal = venta.productos.reduce((acc, producto) => {
-            const precioSinImpuesto = producto.subtotal / (1 + (producto.impuestos / 100 || 0));
-            return acc + precioSinImpuesto;
-        }, 0);
-        doc
-            .fontSize(10)
-            .font("Helvetica")
-            .text("Subtotal:", 360, currentY + 15, { width: 100, align: "left" })
-            .text(`$${subtotal.toLocaleString('es-CO')}`, 460, currentY + 15, {
-            width: 80,
-            align: "right",
-        });
-        // Impuestos
-        const totalImpuestos = venta.productos.reduce((acc, producto) => {
-            const impuestoProducto = producto.subtotal - (producto.subtotal / (1 + (producto.impuestos / 100 || 0)));
-            return acc + impuestoProducto;
-        }, 0);
-        doc
-            .text("IVA:", 360, currentY + 35, { width: 100, align: "left" })
-            .text(`$${totalImpuestos.toLocaleString('es-CO')}`, 460, currentY + 35, {
-            width: 80,
-            align: "right",
-        });
+        }
+        // 💰 SECCIÓN DE TOTALES (Diseño elegante) - CORREGIDO
+        yPos += 20;
+        // ✅ CORRECCIÓN: Calcular totales correctamente
+        const subtotalSinDescuento = venta.productos?.reduce((acc, p) => acc + ((p.cantidadVendida || 0) * (p.precioUnitario || 0)), 0) || 0;
+        const descuentoTotal = venta.productos?.reduce((acc, p) => acc + ((p.descuento || 0) * (p.cantidadVendida || 0) * (p.precioUnitario || 0) / 100), 0) || 0;
+        // ✅ CORRECCIÓN PRINCIPAL: Calcular total real desde los productos si totalVenta es 0
+        const totalCalculado = venta.productos?.reduce((acc, p) => acc + (p.subtotal || 0), 0) || 0;
+        const totalVenta = venta.totalVenta && venta.totalVenta > 0 ? venta.totalVenta : totalCalculado;
+        // Caja para totales
+        doc.rect(350, yPos, 210, 100).fillAndStroke('#e8f4f8', '#17a2b8');
+        // Subtotal antes de descuentos
+        doc.fontSize(11).font('Helvetica').fillColor('#495057');
+        doc.text('Subtotal:', 360, yPos + 15);
+        doc.text(`$${subtotalSinDescuento.toLocaleString('es-CO')}`, 480, yPos + 15);
+        // Descuentos
+        doc.text('Descuentos:', 360, yPos + 32);
+        doc.text(`-$${descuentoTotal.toLocaleString('es-CO')}`, 480, yPos + 32);
+        // IVA (0% para este caso)
+        doc.text('IVA (0%):', 360, yPos + 49);
+        doc.text('$0', 480, yPos + 49);
         // Línea separadora
-        doc
-            .moveTo(360, currentY + 55)
-            .lineTo(540, currentY + 55)
-            .strokeColor('#2c3e50')
-            .lineWidth(1)
-            .stroke();
+        doc.moveTo(360, yPos + 65).lineTo(550, yPos + 65).stroke();
         // Total final
-        const total = venta.total || subtotal + totalImpuestos;
-        doc
-            .font("Helvetica-Bold")
-            .fontSize(14)
-            .fillColor('#2c3e50')
-            .text("TOTAL:", 360, currentY + 65, { width: 100, align: "left" })
-            .text(`$${total.toLocaleString('es-CO')} COP`, 460, currentY + 65, {
-            width: 80,
-            align: "right",
-        });
-        // PIE DE PÁGINA PROFESIONAL
-        const pieY = doc.page.height - 100;
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#155724');
+        doc.text('TOTAL:', 360, yPos + 75);
+        doc.text(`$${totalVenta.toLocaleString('es-CO')} COP`, 450, yPos + 75);
+        // 🌟 PIE DE PÁGINA ELEGANTE
+        yPos += 130;
         // Línea decorativa
-        doc
-            .moveTo(50, pieY)
-            .lineTo(doc.page.width - 50, pieY)
-            .strokeColor('#2c3e50')
-            .lineWidth(2)
-            .stroke();
-        doc
-            .fontSize(9)
-            .fillColor('#666666')
-            .font("Helvetica")
-            .text("Gracias por confiar en MercaApp - Su socio comercial en Popayán", 50, pieY + 20, { align: "center", width: doc.page.width - 100 })
-            .text("Este documento es una representación impresa de una factura electrónica generada por MercaApp", 50, pieY + 35, { align: "center", width: doc.page.width - 100 })
-            .text(`Generado el ${new Date().toLocaleString('es-CO')}`, 50, pieY + 50, { align: "center", width: doc.page.width - 100 });
+        doc.moveTo(50, yPos).lineTo(560, yPos).stroke();
+        yPos += 20;
+        doc.fontSize(10).font('Helvetica-Oblique').fillColor('#6c757d');
+        doc.text('Gracias por confiar en MercaApp. Este documento es un comprobante oficial de venta.', 50, yPos, { align: 'center', width: 500 });
+        yPos += 20;
+        doc.fontSize(8).fillColor('#adb5bd');
+        doc.text(`Documento generado electrónicamente el ${new Date().toLocaleString('es-CO')}`, 50, yPos, { align: 'center', width: 500 });
     }
+    // ✅ Método mejorado para generar ticket con diseño moderno - CORREGIDO
     static generarTicketEstilizado(doc, venta) {
-        // ENCABEZADO MEJORADO
-        doc
-            .fontSize(22)
-            .font("Helvetica-Bold")
-            .fillColor('#2c3e50')
-            .text("MERCAAPP", { align: "center" });
-        doc
-            .fontSize(14)
-            .font("Helvetica")
-            .fillColor('#666666')
-            .text("TICKET DE VENTA", { align: "center" });
-        doc
-            .fontSize(10)
-            .text("Popayán, Cauca - Colombia", { align: "center" });
-        doc.moveDown();
-        // Línea decorativa
-        doc
-            .moveTo(50, doc.y)
-            .lineTo(doc.page.width - 50, doc.y)
-            .strokeColor('#2c3e50')
-            .lineWidth(2)
-            .stroke();
-        doc.moveDown();
-        // Información básica en caja
-        const infoY = doc.y;
-        doc
-            .rect(50, infoY, doc.page.width - 100, 80)
-            .strokeColor('#e0e0e0')
-            .lineWidth(1)
-            .stroke();
-        doc
-            .fontSize(11)
-            .fillColor('#000000')
-            .font("Helvetica-Bold")
-            .text(`Ticket N°: ${venta.idVenta}`, 60, infoY + 10)
-            .text(`Fecha: ${new Date(venta.fechaVenta).toLocaleString("es-CO")}`, 60, infoY + 25)
-            .text(`Vendedor: ${venta.vendedorInfo.nombrePersona} ${venta.vendedorInfo.apellido}`, 60, infoY + 40)
-            .text(`Método de pago: ${venta.metodoPago || "Efectivo"}`, 60, infoY + 55);
-        doc.y = infoY + 90;
-        doc.moveDown();
-        // PRODUCTOS CON MEJOR FORMATO
-        doc
-            .font("Helvetica-Bold")
-            .fontSize(12)
-            .fillColor('#2c3e50')
-            .text("DETALLE DE PRODUCTOS:");
-        doc.moveDown(0.5);
-        doc.font("Helvetica").fillColor('#000000');
-        let totalImpuestos = 0;
-        venta.productos.forEach((producto, index) => {
-            const impuesto = producto.impuestos ?
-                (producto.subtotal - (producto.subtotal / (1 + (producto.impuestos / 100)))) : 0;
-            totalImpuestos += impuesto;
-            // Producto principal
-            doc
-                .fontSize(10)
-                .font("Helvetica-Bold")
-                .text(`${producto.cantidadVendida}x ${producto.nombre}`)
-                .font("Helvetica")
-                .text(`   $${producto.precioUnitario.toLocaleString('es-CO')} c/u → $${producto.subtotal.toLocaleString('es-CO')}`, { indent: 20 });
-            // Impuesto si aplica
-            if (producto.impuestos > 0) {
-                doc
-                    .fontSize(9)
-                    .fillColor('#666666')
-                    .text(`   IVA (${producto.impuestos}%): $${impuesto.toLocaleString('es-CO')}`, { indent: 20 });
-            }
-            doc.fillColor('#000000').moveDown(0.3);
+        const fecha = new Date(venta.fechaVenta).toLocaleDateString('es-CO');
+        const hora = new Date(venta.fechaVenta).toLocaleTimeString('es-CO', {
+            hour: '2-digit',
+            minute: '2-digit'
         });
-        doc.moveDown();
+        // 🎯 HEADER DEL TICKET (Estilo moderno y compacto)
+        doc.rect(0, 0, 420, 80).fill('#343a40');
+        doc.fontSize(18).font('Helvetica-Bold').fillColor('white');
+        doc.text('MERCAAPP', 50, 25, { align: 'center', width: 320 });
+        doc.fontSize(10).font('Helvetica').fillColor('#ced4da');
+        doc.text('TICKET DE VENTA', 50, 50, { align: 'center', width: 320 });
+        // Reset color
+        doc.fillColor('black');
+        // 📋 INFORMACIÓN DEL TICKET
+        let yPos = 100;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#495057');
+        doc.text(`Ticket N°: ${venta.idVenta || 'N/A'}`, 50, yPos);
+        yPos += 10;
+        doc.text(`Fecha: ${fecha} - ${hora}`, 50, yPos);
+        yPos += 15;
+        const nombreVendedor = `${venta.vendedorInfo?.nombrePersona || 'N/A'} ${venta.vendedorInfo?.apellido || ''}`.trim();
+        doc.text(`Vendedor: ${nombreVendedor}`, 50, yPos);
+        yPos += 25;
+        // Línea separadora estilizada
+        doc.moveTo(50, yPos).lineTo(370, yPos).lineWidth(2).stroke('#dee2e6');
+        yPos += 15;
+        // 🛒 PRODUCTOS (Diseño limpio) - CORREGIDO
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#6c757d');
+        doc.text('PRODUCTOS', 50, yPos);
+        yPos += 15;
+        if (venta.productos && Array.isArray(venta.productos)) {
+            venta.productos.forEach((producto, index) => {
+                // ✅ CORRECCIÓN: Usar cantidadVendida en lugar de cantidad
+                const cantidad = producto.cantidadVendida || 0;
+                const precioUnitario = producto.precioUnitario || 0;
+                // ✅ CORRECCIÓN: Usar el subtotal ya calculado
+                const subtotal = producto.subtotal || (cantidad * precioUnitario);
+                // Nombre del producto
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#212529');
+                doc.text(producto.nombre || 'Producto', 50, yPos, { width: 250 });
+                yPos += 12;
+                // Detalles del producto
+                doc.fontSize(8).font('Helvetica').fillColor('#6c757d');
+                doc.text(`${cantidad} x $${precioUnitario.toLocaleString('es-CO')} = $${subtotal.toLocaleString('es-CO')}`, 60, yPos);
+                // Mostrar descuento si existe
+                if (producto.descuento && producto.descuento > 0) {
+                    yPos += 10;
+                    doc.fontSize(7).fillColor('#dc3545');
+                    doc.text(`Descuento: ${producto.descuento}%`, 60, yPos);
+                }
+                yPos += 18;
+            });
+        }
         // Línea separadora
-        doc
-            .moveTo(50, doc.y)
-            .lineTo(doc.page.width - 50, doc.y)
-            .strokeColor('#2c3e50')
-            .lineWidth(1)
-            .stroke();
-        doc.moveDown();
-        // TOTALES CON MEJOR PRESENTACIÓN
-        const subtotal = venta.total - totalImpuestos;
-        doc
-            .fontSize(11)
-            .font("Helvetica")
-            .text(`Subtotal: $${subtotal.toLocaleString('es-CO')}`, { align: "right" })
-            .text(`IVA: $${totalImpuestos.toLocaleString('es-CO')}`, { align: "right" });
-        doc.moveDown();
-        // TOTAL DESTACADO
-        doc
-            .font("Helvetica-Bold")
-            .fontSize(16)
-            .fillColor('#2c3e50')
-            .text(`TOTAL: $${venta.total.toLocaleString('es-CO')} COP`, { align: "right" });
-        doc.moveDown(2);
-        // Mensaje de agradecimiento mejorado
-        doc
-            .fontSize(12)
-            .font("Helvetica-Bold")
-            .fillColor('#2c3e50')
-            .text("¡Gracias por su preferencia!", { align: "center" });
-        doc
-            .fontSize(9)
-            .font("Helvetica")
-            .fillColor('#666666')
-            .text("Vuelva pronto - MercaApp", { align: "center" })
-            .text(`Generado: ${new Date().toLocaleString('es-CO')}`, { align: "center" });
-    }
-    static async obtenerHistorialComprobantes(ventaId) {
-        try {
-            const comprobantesDir = "C:/MercaApp_Comprobantes/facturas";
-            // Verificar si el directorio existe
-            if (!fs_1.default.existsSync(comprobantesDir)) {
-                return {
-                    success: true,
-                    data: [],
-                    mensaje: "No se encontraron comprobantes",
-                };
-            }
-            const files = fs_1.default
-                .readdirSync(comprobantesDir)
-                .filter((file) => file.includes(ventaId))
-                .map((file) => ({
-                nombre: file,
-                rutaCompleta: path_1.default.join(comprobantesDir, file),
-                fecha: fs_1.default.statSync(path_1.default.join(comprobantesDir, file)).mtime,
-            }));
-            return {
-                success: true,
-                data: files,
-                mensaje: "Historial de comprobantes obtenido",
-            };
-        }
-        catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : "Error al obtener historial",
-            };
-        }
+        doc.moveTo(50, yPos).lineTo(370, yPos).lineWidth(2).stroke('#dee2e6');
+        yPos += 15;
+        // 💰 TOTAL (Destacado) - CORREGIDO
+        doc.rect(50, yPos, 320, 30).fillAndStroke('#d4edda', '#28a745');
+        // ✅ CORRECCIÓN PRINCIPAL: Calcular total real desde los productos si totalVenta es 0
+        const totalCalculado = venta.productos?.reduce((acc, p) => acc + (p.subtotal || 0), 0) || 0;
+        const totalVenta = venta.totalVenta && venta.totalVenta > 0 ? venta.totalVenta : totalCalculado;
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('#155724');
+        doc.text(`TOTAL: ${totalVenta.toLocaleString('es-CO')} COP`, 60, yPos + 10);
+        // 🌟 PIE DE PÁGINA
+        yPos += 50;
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#6c757d');
+        doc.text('¡Gracias por su compra!', 50, yPos, { align: 'center', width: 320 });
+        yPos += 15;
+        doc.fontSize(7).fillColor('#adb5bd');
+        doc.text('MercaApp - Sistema de Gestión Comercial', 50, yPos, { align: 'center', width: 320 });
     }
 }
 exports.ComprobanteService = ComprobanteService;
